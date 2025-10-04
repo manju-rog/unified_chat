@@ -191,63 +191,63 @@ class AbsenceAdapter:
         employee_name: Optional[str],
     ) -> Dict[str, Any]:
         days = calendar.get("days", []) if isinstance(calendar, dict) else []
-        summary_lines: List[str] = [f"📊 Absence Report: {start} to {end}\n"]
         total_absent = 0
         total_vacation = 0
         
+        # Group absences by employee
+        employee_absences: Dict[str, Dict[str, Any]] = {}
+        
         # Fetch details for days with absences
-        days_with_absences = []
         for day in days:
             day_date = day.get("date")
             absent_count = day.get("A", 0)
             vacation_count = day.get("V", 0)
             
             if absent_count or vacation_count:
-                # Fetch detailed info for this day
                 try:
                     details = await self._fetch_day_details(client, day_date)
-                    employees = details.get("employees", {})
-                    absent_list = employees.get("A", [])
-                    vacation_list = employees.get("V", [])
+                    employees_data = details.get("employees", {})
+                    absent_list = employees_data.get("A", [])
+                    vacation_list = employees_data.get("V", [])
                     
-                    day_info = f"📅 {day_date}:"
-                    if absent_list:
-                        names = [emp.get("name", "Unknown") for emp in absent_list]
-                        day_info += f"\n  🚫 Absent: {', '.join(names)}"
+                    # Group by employee
+                    for emp in absent_list:
+                        name = emp.get("name", "Unknown")
+                        if name not in employee_absences:
+                            employee_absences[name] = {
+                                "name": name,
+                                "status": "Absent",
+                                "dates": [],
+                                "department": emp.get("department", ""),
+                            }
+                        employee_absences[name]["dates"].append(day_date)
                         
-                    if vacation_list:
-                        names = [emp.get("name", "Unknown") for emp in vacation_list]
-                        day_info += f"\n  🏖️ Vacation: {', '.join(names)}"
+                    for emp in vacation_list:
+                        name = emp.get("name", "Unknown")
+                        if name not in employee_absences:
+                            employee_absences[name] = {
+                                "name": name,
+                                "status": "Vacation",
+                                "dates": [],
+                                "department": emp.get("department", ""),
+                            }
+                        employee_absences[name]["dates"].append(day_date)
                         
-                    days_with_absences.append(day_info)
                 except Exception:
-                    # Fallback to counts if details fetch fails
-                    day_info = f"📅 {day_date}: {absent_count} absent, {vacation_count} on vacation"
-                    days_with_absences.append(day_info)
+                    pass
                 
             total_absent += absent_count or 0
             total_vacation += vacation_count or 0
 
-        if days_with_absences:
-            summary_lines.extend(days_with_absences)
-        else:
-            summary_lines.append("✅ No absences recorded in this period.")
-
-        if employee_name:
-            summary_lines.append(
-                f"\n(Showing all absences; filter for {employee_name} not yet available for range queries)"
-            )
-
-        summary_lines.append(
-            f"\n📈 Total: {total_absent} absence(s), {total_vacation} vacation day(s)"
-        )
-
+        # Format as structured data for rich UI
         return {
             "success": True,
-            "message": "\n".join(summary_lines),
+            "message": "Absence report generated",
             "details": {
                 "start": start,
                 "end": end,
+                "employee_absences": list(employee_absences.values()),
+                "display_type": "absence_breakdown",  # Signal to frontend
                 "totals": {
                     "absent": total_absent,
                     "vacation": total_vacation,

@@ -95,7 +95,8 @@ What would you like to do today?`,
           actionType: data.action_type,
           actionData: data.action_data,
           downloadUrl: resolvedDownloadUrl,
-          disambiguationOptions: data.disambiguation_options
+          disambiguationOptions: data.disambiguation_options,
+          confirmationButtons: data.confirmation_buttons
         }
       };
       setMessages(prev => [...prev, assistantMessage]);
@@ -214,6 +215,140 @@ What would you like to do today?`,
     }
   }, [sessionId, API_BASE_URL]);
   
+  // Handle confirmation button click (Yes/No)
+  const handleConfirmationClick = useCallback(async (buttonValue) => {
+    // Just send the button value as a regular message
+    setInputValue(buttonValue);
+    
+    // Trigger send message
+    const message = buttonValue;
+    if (!message || isLoading) return;
+    
+    setInputValue('');
+    const userMessage = {
+      id: Date.now(),
+      role: 'user',
+      content: message,
+      timestamp: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setError(null);
+    
+    try {
+      setIsLoading(true);
+      
+      const response = await fetch(`${API_BASE_URL}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: message,
+          session_id: sessionId
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      const assistantMessage = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: data.response,
+        timestamp: new Date().toISOString(),
+        metadata: {
+          actionType: data.action_type,
+          actionData: data.action_data,
+          confirmationButtons: data.confirmation_buttons
+        }
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+      
+    } catch (err) {
+      console.error('Confirmation error:', err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [sessionId, API_BASE_URL, isLoading]);
+  
+  // Render absence breakdown card
+  const renderAbsenceBreakdown = useCallback((data) => {
+    const { start, end, employee_absences, totals } = data;
+    
+    // Parse month/year from start date
+    const startDate = new Date(start);
+    const monthYear = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
+    
+    return (
+      <div className="absence-breakdown-card">
+        <div className="breakdown-header">
+          <h3>ABSENCE BREAKDOWN</h3>
+          <div className="breakdown-period">{monthYear}</div>
+        </div>
+        
+        <div className="breakdown-table">
+          <div className="breakdown-table-header">
+            <div className="col-name">NAME</div>
+            <div className="col-status">STATUS</div>
+            <div className="col-dates">DATES</div>
+          </div>
+          
+          <div className="breakdown-table-body">
+            {employee_absences && employee_absences.length > 0 ? (
+              employee_absences.map((emp, index) => (
+                <div key={index} className="breakdown-row">
+                  <div className="col-name">
+                    <span className="employee-name">{emp.name}</span>
+                  </div>
+                  <div className="col-status">
+                    <span className={`status-badge ${emp.status.toLowerCase()}`}>
+                      {emp.status}
+                    </span>
+                  </div>
+                  <div className="col-dates">
+                    <div className="date-pills">
+                      {emp.dates.map((date, idx) => {
+                        const d = new Date(date);
+                        const formatted = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        return (
+                          <span key={idx} className="date-pill">
+                            {formatted}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="breakdown-empty">
+                <span className="material-icons">check_circle</span>
+                <p>No absences recorded for this period</p>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {totals && (totals.absent > 0 || totals.vacation > 0) && (
+          <div className="breakdown-footer">
+            <div className="total-stat">
+              <span className="stat-label">Total Absences:</span>
+              <span className="stat-value">{totals.absent}</span>
+            </div>
+            <div className="total-stat">
+              <span className="stat-label">Total Vacations:</span>
+              <span className="stat-value">{totals.vacation}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }, []);
+  
   // Render message
   const renderMessage = useCallback((message) => {
     const messageClass = `message ${message.role}${message.messageType ? ` ${message.messageType}` : ''}`;
@@ -230,6 +365,23 @@ What would you like to do today?`,
               <span className="material-icons">download</span>
               Download SOW Document
             </button>
+          </div>
+        </div>
+      );
+    }
+    
+    // Handle absence breakdown
+    if (message.metadata?.actionData?.display_type === 'absence_breakdown') {
+      return (
+        <div key={message.id} className="message assistant">
+          <div className="message-avatar">
+            <span className="material-icons">smart_toy</span>
+          </div>
+          <div className="message-content">
+            {renderAbsenceBreakdown(message.metadata.actionData)}
+            <div className="message-time">
+              {formatTime(message.timestamp)}
+            </div>
           </div>
         </div>
       );
@@ -278,6 +430,25 @@ What would you like to do today?`,
             </div>
           )}
           
+          {/* Confirmation buttons (Yes/No) */}
+          {message.metadata?.confirmationButtons && message.metadata.confirmationButtons.length > 0 && (
+            <div className="confirmation-buttons">
+              {message.metadata.confirmationButtons.map((button) => (
+                <button
+                  key={button.id}
+                  className={`confirmation-button ${button.style || 'primary'}`}
+                  onClick={() => handleConfirmationClick(button.value)}
+                  disabled={isLoading}
+                >
+                  <span className="material-icons">
+                    {button.value === 'yes' ? 'check_circle' : 'cancel'}
+                  </span>
+                  {button.label}
+                </button>
+              ))}
+            </div>
+          )}
+          
           <div className="message-time">
             {formatTime(message.timestamp)}
           </div>
@@ -289,7 +460,7 @@ What would you like to do today?`,
         </div>
       </div>
     );
-  }, [formatTime, handleOptionSelect, isLoading]);
+  }, [formatTime, handleOptionSelect, handleConfirmationClick, renderAbsenceBreakdown, isLoading]);
   
   // Typing indicator
   const renderTypingIndicator = () => (

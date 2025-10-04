@@ -73,6 +73,15 @@ class DisambiguationOption(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
 
 
+class ConfirmationButton(BaseModel):
+    """Represents a Yes/No confirmation button."""
+    
+    id: str
+    label: str
+    value: str  # "yes" or "no"
+    style: Optional[str] = "primary"  # "primary" or "secondary"
+
+
 class ChatResponse(BaseModel):
     """Outgoing response returned to the client."""
 
@@ -84,4 +93,5 @@ class ChatResponse(BaseModel):
     download_url: Optional[str] = None
     errors: Optional[List[str]] = None
     disambiguation_options: Optional[List[DisambiguationOption]] = None
+    confirmation_buttons: Optional[List[ConfirmationButton]] = None
     requires_confirmation: bool = False

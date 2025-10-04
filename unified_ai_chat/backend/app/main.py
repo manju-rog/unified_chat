@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 
 from .config import Settings, get_settings
 from .gemini_client import ToolCall, gemini_client
-from .models import ChatRequest, ChatResponse, DisambiguationOption, SessionState
+from .models import ChatRequest, ChatResponse, ConfirmationButton, DisambiguationOption, SessionState
 from .services.absence import absence_adapter
 from .services.sow import sow_adapter
 from .session_manager import session_manager
@@ -73,6 +73,18 @@ async def chat_endpoint(
     if user_message.lower() in ["yes", "y", "yeah", "yep", "sure", "ok", "okay"]:
         pending_action = session.metadata.get("pending_action")
         if pending_action:
+            action_type = pending_action.get("type")
+            
+            # If asking for reason, prompt for it
+            if action_type == "ask_reason":
+                session.add_message("user", user_message)
+                session.metadata["waiting_for_reason"] = True
+                return ChatResponse(
+                    session_id=session.session_id,
+                    response="Please state your reason:",
+                    action_type="awaiting_reason",
+                )
+            
             # Execute the pending action
             session.add_message("user", user_message)
             result = await _execute_pending_action(session, pending_action)
@@ -81,7 +93,23 @@ async def chat_endpoint(
             background_tasks.add_task(session_manager.cleanup_expired)
             return result
     elif user_message.lower() in ["no", "n", "nope", "cancel"]:
-        if session.metadata.get("pending_action"):
+        pending_action = session.metadata.get("pending_action")
+        if pending_action:
+            action_type = pending_action.get("type")
+            
+            # If declining to add reason, execute without reason
+            if action_type == "ask_reason":
+                session.add_message("user", user_message)
+                data = pending_action.get("data", {})
+                data["reason"] = ""  # No reason
+                pending_action["type"] = "mark_absence"
+                result = await _execute_pending_action(session, pending_action)
+                session.metadata.pop("pending_action", None)
+                session.metadata.pop("pending_context", None)
+                background_tasks.add_task(session_manager.cleanup_expired)
+                return result
+            
+            # Cancel other pending actions
             session.metadata.pop("pending_action", None)
             session.metadata.pop("pending_context", None)
             session.add_message("user", user_message)
@@ -89,6 +117,21 @@ async def chat_endpoint(
                 session_id=session.session_id,
                 response="Okay, cancelled. How else can I help you?",
             )
+    
+    # Handle reason input
+    if session.metadata.get("waiting_for_reason"):
+        session.metadata.pop("waiting_for_reason", None)
+        pending_action = session.metadata.get("pending_action")
+        if pending_action:
+            session.add_message("user", user_message)
+            # Add the reason to the pending action
+            pending_action["data"]["reason"] = user_message
+            pending_action["type"] = "mark_absence"
+            result = await _execute_pending_action(session, pending_action)
+            session.metadata.pop("pending_action", None)
+            session.metadata.pop("pending_context", None)
+            background_tasks.add_task(session_manager.cleanup_expired)
+            return result
     
     session.add_message("user", user_message)
 
@@ -134,6 +177,7 @@ async def chat_endpoint(
     action_data: Optional[Dict[str, Any]] = None
     download_url: Optional[str] = None
     disambiguation_options: Optional[List[DisambiguationOption]] = None
+    confirmation_buttons: Optional[List[ConfirmationButton]] = None
 
     if tool_calls:
         for call in tool_calls:
@@ -142,6 +186,7 @@ async def chat_endpoint(
             action_type = tool_result.get("action_type") or action_type
             action_data = tool_result.get("action_data") or action_data
             disambiguation_options = tool_result.get("disambiguation_options") or disambiguation_options
+            confirmation_buttons = tool_result.get("confirmation_buttons") or confirmation_buttons
             if tool_result.get("download_path"):
                 download_url = f"/api/sow/documents/{session.session_id}/{tool_result['download_path']}"
                 action_data = action_data or {}
@@ -169,6 +214,7 @@ async def chat_endpoint(
         action_data=action_data,
         download_url=download_url,
         disambiguation_options=disambiguation_options,
+        confirmation_buttons=confirmation_buttons,
     )
 
 
@@ -242,13 +288,53 @@ async def _execute_tool_call(
                     date_str = (date.today() + timedelta(days=1)).isoformat()
                     
                 reason = args.get("reason", "")
+                
+                # If no reason provided, ask politely
+                if not reason:
+                    status_text = {"A": "absent", "P": "present", "V": "on vacation"}.get(status, status)
+                    
+                    # Store pending action
+                    session.metadata["pending_action"] = {
+                        "type": "ask_reason",
+                        "data": {
+                            "employee_name": employee_name,
+                            "status": status,
+                            "dates": [date_str],
+                            "reason": "",
+                        }
+                    }
+                    
+                    # Return with Yes/No buttons
+                    confirmation_buttons = [
+                        ConfirmationButton(
+                            id="reason_yes",
+                            label="Yes, add reason",
+                            value="yes",
+                            style="primary"
+                        ),
+                        ConfirmationButton(
+                            id="reason_no",
+                            label="No, skip",
+                            value="no",
+                            style="secondary"
+                        )
+                    ]
+                    
+                    return {
+                        "message": f"Would you like to add a reason for marking {employee_name} as {status_text}?",
+                        "action_type": "reason_confirmation",
+                        "confirmation_buttons": confirmation_buttons,
+                    }
+                
+                # If reason is provided, mark directly
                 result = await absence_adapter.mark_absence(
                     employee_name, [date_str], status, reason
                 )
                 status_text = {"A": "absent", "P": "present", "V": "on vacation"}.get(status, status)
                 if result.get("success"):
+                    reason_text = f" Reason: {reason}" if reason else ""
                     return {
-                        "message": f"✅ Marked {employee_name} as {status_text} for {date_str}.",
+                        "message": f"✅ Marked {employee_name} as {status_text} for {date_str}.{reason_text}",
                         "action_type": "absence_mark",
                         "action_data": result.get("details"),
                     }
