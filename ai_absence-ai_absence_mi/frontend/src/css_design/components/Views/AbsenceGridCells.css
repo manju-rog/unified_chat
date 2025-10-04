@@ -1,0 +1,162 @@
+/* Absence Cell Styles */
+.absence-cell {
+  min-width: 40px;
+  width: 40px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--color-card-border);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.absence-cell:hover {
+  transform: scale(1.1);
+  z-index: 100;
+  box-shadow: var(--shadow-md);
+}
+
+/* Absence Status Colors */
+.absence-cell--present {
+  background: #e8f5e8;
+  color: #2e7d32;
+}
+
+.absence-cell--absent {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.absence-cell--half {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+
+.absence-cell--vacation {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.absence-cell--sick {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.absence-cell--wfh {
+  background: #efebe9;
+  color: #5d4037;
+}
+
+.absence-cell--travel {
+  background: #eceff1;
+  color: #455a64;
+}
+
+.absence-cell--conference {
+  background: #e8eaf6;
+  color: #3949ab;
+}
+
+/* Cell Editing */
+.absence-cell--editing {
+  background: #fff3cd;
+  border: 2px solid #ffc107;
+  z-index: 200;
+}
+
+.cell-editor {
+  width: 100%;
+  background: white;
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  padding: 2px;
+  z-index: 1000;
+}
+
+.cell-editor select {
+  width: 100%;
+  padding: var(--space-2);
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+}
+
+.cell-editor-actions {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.cell-editor-actions button {
+  flex: 1;
+  padding: var(--space-1);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.save-btn {
+  background: var(--color-success);
+  color: white;
+}
+
+.cancel-btn {
+  background: var(--color-text-muted);
+  color: white;
+}
+
+/* Legend */
+.absence-legend {
+  background: var(--color-surface);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-card-border);
+}
+
+.absence-legend h3 {
+  margin-bottom: var(--space-3);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.legend-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.legend-indicator {
+  width: 32px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.legend-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* Responsive Design for Legend */
+@media (max-width: 768px) {
+  .legend-items {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

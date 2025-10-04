@@ -1,0 +1,382 @@
+/* Calendar specific variables - bright and vibrant theme */
+.cal-shell {
+  --cal-bg: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  --cal-surface: #ffffff;
+  --cal-border: #cbd5e1;
+  --cal-text-primary: #1e293b;
+  --cal-text-secondary: #475569;
+  --cal-text-muted: #64748b;
+  --cal-primary: #3b82f6;
+  --cal-primary-light: #dbeafe;
+  --cal-a: #ef4444;
+  --cal-a-light: #fef2f2;
+  --cal-v: #8b5cf6;
+  --cal-v-light: #f3f4f6;
+  --cal-p: #10b981;
+  --cal-p-light: #ecfdf5;
+  --cal-hol: #f59e0b;
+  --cal-hol-light: #fffbeb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.cal-shell {
+  max-width: 1100px;
+  margin: 18px auto;
+  padding: 20px;
+  color: var(--cal-text-primary);
+  background: var(--cal-bg);
+  border-radius: var(--radius-xl, 0.75rem);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.cal-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.cal-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.month {
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  font-size: 1.2em;
+}
+
+.navbtn {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md, 0.375rem);
+  border: 1px solid var(--cal-border);
+  background: var(--cal-surface);
+  color: var(--cal-text-primary);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+.navbtn:hover {
+  background: var(--cal-primary);
+  color: white;
+}
+
+.todaybtn {
+  margin-left: 6px;
+  border: 1px solid var(--cal-border);
+  background: var(--cal-surface);
+  padding: 6px 10px;
+  border-radius: var(--radius-md, 0.375rem);
+  color: var(--cal-text-primary);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+.todaybtn:hover {
+  background: var(--cal-primary);
+  color: white;
+}
+
+.cal-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.refresh-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--cal-primary-light);
+  border: 1px solid var(--cal-primary);
+  border-radius: var(--radius-md, 0.375rem);
+  color: var(--cal-primary);
+  font-size: var(--font-size-xs, 0.75rem);
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.refresh-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--cal-primary-light);
+  border-top: 2px solid var(--cal-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.dept {
+  background: var(--cal-surface);
+  border: 1px solid var(--cal-border);
+  color: var(--cal-text-primary);
+  border-radius: var(--radius-md, 0.375rem);
+  padding: 6px 8px;
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+.tz {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--cal-border);
+  background: var(--cal-surface);
+  padding: 6px 10px;
+  border-radius: var(--radius-lg, 0.5rem);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+.tz .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: conic-gradient(var(--cal-primary), var(--cal-v), var(--cal-p));
+}
+
+.tzname {
+  font-size: 12px;
+  color: var(--cal-text-secondary);
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.clock {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--cal-text-primary);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.tzline {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.cal-head {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.wcell {
+  padding: 8px 6px;
+  border: 1px solid var(--cal-border);
+  border-radius: var(--radius-lg, 0.5rem);
+  background: var(--cal-surface);
+  color: var(--cal-text-secondary);
+  text-align: center;
+  font-weight: var(--font-weight-semibold, 600);
+  font-size: var(--font-size-sm, 0.875rem);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.cell {
+  min-height: 120px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-xl, 0.75rem);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.cell:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-color: var(--cal-primary);
+}
+
+.cell.hovered {
+  border-color: var(--cal-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2), 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.hover-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(135deg, var(--cal-primary) 0%, #1d4ed8 100%);
+  color: white;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  transform: translateY(100%);
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+@keyframes slideUp {
+  to {
+    transform: translateY(0);
+  }
+}
+
+.cell.dim {
+  opacity: 0.5;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+
+.cell.weekend {
+  background: linear-gradient(135deg, #fef7ff 0%, #f3e8ff 100%);
+  border-color: #e9d5ff;
+}
+
+.cell.today {
+  border-color: var(--cal-primary);
+  background: linear-gradient(135deg, var(--cal-primary-light) 0%, #ffffff 100%);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2), 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.cell-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.date {
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--cal-text-primary);
+  font-size: var(--font-size-base, 1rem);
+}
+
+.chip {
+  font-size: 10px;
+  border: 1px solid var(--cal-hol);
+  padding: 2px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 72%;
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.chip-holiday {
+  border-color: var(--cal-hol);
+  color: #e65100;
+  background: rgba(255, 152, 0, 0.1);
+}
+
+.bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  font-size: 11px;
+  border: 1px solid var(--cal-border);
+  border-radius: var(--radius-lg, 0.5rem);
+  padding: 3px 6px;
+  background: var(--cal-surface);
+  color: var(--cal-text-secondary);
+  font-weight: var(--font-weight-medium, 500);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+.badge.empty {
+  opacity: 0.5;
+  color: var(--cal-text-muted);
+}
+
+.b-A {
+  border-color: var(--cal-a);
+  background: linear-gradient(135deg, var(--cal-a-light) 0%, #ffffff 100%);
+  color: var(--cal-a);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.b-V {
+  border-color: var(--cal-v);
+  background: linear-gradient(135deg, var(--cal-v-light) 0%, #ffffff 100%);
+  color: var(--cal-v);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.b-P {
+  border-color: var(--cal-p);
+  background: linear-gradient(135deg, var(--cal-p-light) 0%, #ffffff 100%);
+  color: var(--cal-p);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.cal-legend {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  color: var(--cal-text-secondary);
+  font-size: var(--font-size-sm, 0.875rem);
+  font-weight: var(--font-weight-medium, 500);
+  flex-wrap: wrap;
+}
+
+.legend-tip {
+  color: var(--cal-primary);
+  font-size: var(--font-size-xs, 0.75rem);
+  font-weight: var(--font-weight-semibold, 600);
+  padding: 4px 8px;
+  background: var(--cal-primary-light);
+  border-radius: var(--radius-md, 0.375rem);
+  border: 1px solid var(--cal-primary);
+}
+
+.legend {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.b {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-sm, 0.25rem);
+}
+
+.bA {
+  background: var(--cal-a);
+}
+
+.bV {
+  background: var(--cal-v);
+}
+
+.bP {
+  background: var(--cal-p);
+}
+
+.bH {
+  background: var(--cal-hol);
+}

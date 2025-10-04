@@ -1,0 +1,371 @@
+/* Modern Header Styles */
+.modern-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--header-height);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-bottom: 1px solid #e2e8f0;
+  z-index: 1000;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+.modern-header__container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  padding: 0 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Left Section */
+.modern-header__left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.modern-header__menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.modern-header__menu-btn:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.modern-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modern-header__logo {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.modern-header__logo .material-icons {
+  font-size: 20px;
+}
+
+.modern-header__brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.modern-header__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1;
+}
+
+.modern-header__subtitle {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
+/* Center Section */
+.modern-header__center {
+  flex: 1;
+  max-width: 480px;
+  margin: 0 32px;
+}
+
+.modern-header__search {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.modern-header__search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  z-index: 2;
+}
+
+.modern-header__search-icon .material-icons {
+  font-size: 20px;
+}
+
+.modern-header__search-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 80px 0 48px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  font-size: 14px;
+  color: #334155;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.modern-header__search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.modern-header__search-input::placeholder {
+  color: #94a3b8;
+}
+
+.modern-header__search-clear {
+  position: absolute;
+  right: 44px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  width: 28px;
+  height: 28px;
+  z-index: 3;
+}
+
+.modern-header__search-clear:hover {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.modern-header__search-clear .material-icons {
+  font-size: 16px;
+}
+
+.modern-header__search-shortcut {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #f1f5f9;
+  color: #64748b;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid #e2e8f0;
+}
+
+/* Right Section */
+.modern-header__right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.modern-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modern-header__action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.modern-header__action-btn:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.modern-header__action-btn .material-icons {
+  font-size: 20px;
+}
+
+.modern-header__notifications {
+  position: relative;
+}
+
+.modern-header__notification-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 16px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+  animation: pulse 2s infinite;
+}
+
+/* Profile Section */
+.modern-header__profile {
+  position: relative;
+}
+
+.modern-header__profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: none;
+  padding: 6px 12px 6px 6px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modern-header__profile-btn:hover {
+  background: #f1f5f9;
+}
+
+.modern-header__avatar {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.modern-header__status-indicator {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  background: #22c55e;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.modern-header__user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.modern-header__user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.2;
+}
+
+.modern-header__user-role {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+.modern-header__dropdown-icon {
+  color: #94a3b8;
+  font-size: 18px;
+  transition: transform 0.2s ease;
+}
+
+.modern-header__profile-btn:hover .modern-header__dropdown-icon {
+  transform: rotate(180deg);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .modern-header__center {
+    max-width: 320px;
+    margin: 0 16px;
+  }
+  
+  .modern-header__user-info {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .modern-header__container {
+    padding: 0 16px;
+  }
+  
+  .modern-header__center {
+    display: none;
+  }
+  
+  .modern-header__brand-text {
+    display: none;
+  }
+  
+  .modern-header__actions {
+    gap: 4px;
+  }
+  
+  .modern-header__action-btn {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .modern-header__avatar {
+    width: 32px;
+    height: 32px;
+  }
+}
