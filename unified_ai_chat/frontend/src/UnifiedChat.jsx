@@ -145,10 +145,10 @@ What would you like to do today?`,
   
   // Quick actions
   const quickActions = [
-    "Mark Manju absent today",
-    "Who was absent yesterday?",
-    "Create a SOW document",
-    "Show me this week's absences"
+    "Who is absent today?",
+    "Show September absences",
+    "Create a SOW",
+    "Mark someone absent"
   ];
   
   const handleQuickAction = useCallback((action) => {
@@ -479,78 +479,91 @@ What would you like to do today?`,
     </div>
   );
   
+  // Determine if container should be expanded
+  const isExpanded = messages.length > 1;
+  
   return (
-    <div className="unified-chat-container">
-      <div className="chat-header">
-        <div className="header-content">
-          <span className="material-icons header-icon">smart_toy</span>
-          <div className="header-text">
-            <h1>Unified AI Assistant</h1>
-            <p>Absence Management & SOW Generation</p>
+    <div className={`unified-chat-container ${isExpanded ? 'expanded' : ''}`}>
+      {/* Hero Section - Only show when no messages */}
+      {messages.length <= 1 && (
+        <div className="chat-hero">
+          <h1 className="hero-title">Ask AI, Know More.</h1>
+          <p className="hero-subtitle">Your intelligent assistant for absence management and document generation</p>
+        </div>
+      )}
+      
+      {/* Chat Card Wrapper */}
+      <div className="chat-card">
+        <div className="chat-header">
+          <div className="header-content">
+            <span className="material-icons header-icon">smart_toy</span>
+            <div className="header-text">
+              <h1>AI Assistant</h1>
+              {sessionId && <p className="session-badge">Active Session</p>}
+            </div>
           </div>
         </div>
-        {sessionId && (
-          <div className="session-info">
-            <span className="material-icons">history</span>
-            <span>Session Active</span>
+        
+        <div className="chat-messages">
+          {messages.map(renderMessage)}
+          {isLoading && renderTypingIndicator()}
+          <div ref={messagesEndRef} />
+        </div>
+        
+        <div className="chat-input-area">
+        <div className="input-wrapper">
+          <div className="input-container">
+            <button className="input-action-btn" title="Add attachment">
+              <span className="material-icons">add</span>
+            </button>
+            <textarea
+              ref={inputRef}
+              className="chat-input"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="How can I help you today?"
+              rows={1}
+              disabled={isLoading}
+            />
+            <button
+              className="send-button"
+              onClick={handleSendMessage}
+              disabled={!inputValue.trim() || isLoading}
+              title="Send message"
+            >
+              {isLoading ? (
+                <span className="material-icons spinning">hourglass_empty</span>
+              ) : (
+                <span className="material-icons">send</span>
+              )}
+            </button>
           </div>
-        )}
-      </div>
-      
-      <div className="chat-messages">
-        {messages.map(renderMessage)}
-        {isLoading && renderTypingIndicator()}
-        <div ref={messagesEndRef} />
-      </div>
-      
-      {messages.length <= 1 && (
-        <div className="quick-actions">
-          <p className="quick-actions-title">Quick Actions:</p>
-          <div className="quick-actions-grid">
+          
+          {/* Quick Actions below input */}
+          <div className="quick-actions-row">
             {quickActions.map((action, index) => (
               <button
                 key={index}
-                className="quick-action-btn"
+                className="quick-action-chip"
                 onClick={() => handleQuickAction(action)}
+                disabled={isLoading}
               >
                 {action}
               </button>
             ))}
           </div>
         </div>
-      )}
-      
-      <div className="chat-input-area">
-        <div className="input-container">
-          <textarea
-            ref={inputRef}
-            className="chat-input"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type your message... (e.g., 'Mark John absent today' or 'Create a SOW')"
-            rows={1}
-            disabled={isLoading}
-          />
-          <button
-            className="send-button"
-            onClick={handleSendMessage}
-            disabled={!inputValue.trim() || isLoading}
-          >
-            {isLoading ? (
-              <span className="material-icons spinning">hourglass_empty</span>
-            ) : (
-              <span className="material-icons">send</span>
-            )}
-          </button>
-        </div>
+        
         {error && (
           <div className="error-message">
             <span className="material-icons">error</span>
             {error}
           </div>
         )}
+        </div>
       </div>
+      {/* End Chat Card */}
     </div>
   );
 };
