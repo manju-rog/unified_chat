@@ -486,9 +486,9 @@ What would you like to do today?`,
     <div className={`unified-chat-container ${isExpanded ? 'expanded' : ''}`}>
       {/* Hero Section - Only show when no messages */}
       {messages.length <= 1 && (
-        <div className="chat-hero">
-          <h1 className="hero-title">Ask AI, Know More.</h1>
-          <p className="hero-subtitle">Your intelligent assistant for absence management and document generation</p>
+        <div className="hero-section">
+          <h1 className="hero-title">Smart Workforce Hub</h1>
+          <p className="hero-subtitle">Streamline absence tracking and generate professional documents with AI-powered assistance</p>
         </div>
       )}
       
