@@ -1420,8 +1420,8 @@ body::after {
     0 0 30px rgba(139, 92, 246, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
-/
-* ===== MODE-BASED COLOR THEMES ===== */
+
+/* ===== MODE-BASED COLOR THEMES ===== */
 
 /* SOW Mode - Red Theme */
 .unified-chat-container.sow .chat-card::before {

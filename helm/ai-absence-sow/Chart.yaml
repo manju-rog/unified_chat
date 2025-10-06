@@ -1,0 +1,43 @@
+# 📦 Helm Chart for AI Absence & SOW System
+
+apiVersion: v2
+name: ai-absence-sow
+description: AI-powered absence management and SOW generation system
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+keywords:
+  - ai
+  - absence-management
+  - sow-generation
+  - hr
+  - documents
+
+home: https://github.com/manju-rog/unified_chat
+sources:
+  - https://github.com/manju-rog/unified_chat
+
+maintainers:
+  - name: AI Absence SOW Team
+    email: team@company.com
+
+dependencies:
+  - name: postgresql
+    version: "12.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled
+  
+  - name: prometheus
+    version: "25.x.x"
+    repository: "https://prometheus-community.github.io/helm-charts"
+    condition: monitoring.prometheus.enabled
+  
+  - name: grafana
+    version: "7.x.x"
+    repository: "https://grafana.github.io/helm-charts"
+    condition: monitoring.grafana.enabled
+
+annotations:
+  category: Business Applications
+  licenses: MIT

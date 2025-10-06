@@ -1,0 +1,322 @@
+# 🎛️ Helm Values for AI Absence & SOW System
+
+# Global Configuration
+global:
+  imageRegistry: "your-registry-url"
+  imagePullSecrets: []
+  storageClass: "oci-bv"
+
+# Application Configuration
+app:
+  name: ai-absence-sow
+  version: "1.0.0"
+  environment: production
+
+# Frontend Configuration
+frontend:
+  enabled: true
+  replicaCount: 2
+  
+  image:
+    repository: ai-absence-sow-frontend
+    tag: "latest"
+    pullPolicy: Always
+  
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+  
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# Backend Configuration
+backend:
+  enabled: true
+  replicaCount: 3
+  
+  image:
+    repository: ai-absence-sow-backend
+    tag: "latest"
+    pullPolicy: Always
+  
+  service:
+    type: ClusterIP
+    port: 5002
+    targetPort: 5002
+  
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  env:
+    GEMINI_MODEL: "gemini-2.0-flash-exp"
+    SESSION_EXPIRY_MINUTES: "30"
+    SESSION_HISTORY_LIMIT: "10"
+    LOG_LEVEL: "INFO"
+  
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# Absence Service Configuration
+absenceService:
+  enabled: true
+  replicaCount: 2
+  
+  image:
+    repository: ai-absence-sow-absence-service
+    tag: "latest"
+    pullPolicy: Always
+  
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  
+  resources:
+    requests:
+      memory: "768Mi"
+      cpu: "300m"
+    limits:
+      memory: "1.5Gi"
+      cpu: "1000m"
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  env:
+    SPRING_PROFILES_ACTIVE: "kubernetes"
+    JAVA_OPTS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC"
+  
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# Database Configuration
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "change-me-in-production"
+    username: "absence_app"
+    password: "change-me-in-production"
+    database: "absence_db"
+  
+  primary:
+    persistence:
+      enabled: true
+      storageClass: "oci-bv"
+      size: 20Gi
+    
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+  
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+# Ingress Configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+  
+  hosts:
+    - host: ai-absence-sow.yourdomain.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /
+          pathType: Prefix
+          service: frontend
+  
+  tls:
+    - secretName: tls-secret
+      hosts:
+        - ai-absence-sow.yourdomain.com
+
+# Storage Configuration
+storage:
+  generatedDocs:
+    enabled: true
+    size: 10Gi
+    storageClass: "oci-bv"
+    accessMode: ReadWriteMany
+  
+  absenceData:
+    enabled: true
+    size: 5Gi
+    storageClass: "oci-bv"
+    accessMode: ReadWriteOnce
+  
+  backups:
+    enabled: true
+    size: 50Gi
+    storageClass: "oci-bv-low-cost"
+    accessMode: ReadWriteOnce
+  
+  logs:
+    enabled: true
+    size: 20Gi
+    storageClass: "oci-bv"
+    accessMode: ReadWriteOnce
+
+# Monitoring Configuration
+monitoring:
+  enabled: true
+  
+  prometheus:
+    enabled: true
+    retention: "30d"
+    storageSize: "10Gi"
+  
+  grafana:
+    enabled: true
+    adminPassword: "admin123"
+    persistence:
+      enabled: true
+      size: "5Gi"
+  
+  loki:
+    enabled: true
+    retention: "168h"  # 7 days
+    storageSize: "10Gi"
+
+# Security Configuration
+security:
+  podSecurityPolicy:
+    enabled: true
+  
+  networkPolicy:
+    enabled: true
+  
+  rbac:
+    enabled: true
+    serviceAccountName: "ai-absence-sow-sa"
+
+# Backup Configuration
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  retention: "7d"
+  
+  storage:
+    size: "100Gi"
+    storageClass: "oci-bv-low-cost"
+  
+  # Oracle Cloud Storage integration
+  oci:
+    enabled: false
+    bucketName: ""
+    region: "us-phoenix-1"
+
+# Secrets Configuration (use external secret management in production)
+secrets:
+  geminiApiKey: "your-gemini-api-key-here"
+  databasePassword: "your-secure-db-password"
+  jwtSecret: "your-jwt-secret-key"
+
+# Load Balancer Configuration
+loadBalancer:
+  enabled: true
+  type: "LoadBalancer"
+  annotations:
+    service.beta.kubernetes.io/oci-load-balancer-shape: "flexible"
+    service.beta.kubernetes.io/oci-load-balancer-shape-flex-min: "10"
+    service.beta.kubernetes.io/oci-load-balancer-shape-flex-max: "100"
+
+# Autoscaling Configuration
+autoscaling:
+  enabled: true
+  
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  vpa:
+    enabled: false
+    updateMode: "Auto"
+  
+  cluster:
+    enabled: true
+    minNodes: 1
+    maxNodes: 10
+
+# Resource Quotas
+resourceQuota:
+  enabled: true
+  hard:
+    requests.cpu: "4"
+    requests.memory: "8Gi"
+    limits.cpu: "8"
+    limits.memory: "16Gi"
+    persistentvolumeclaims: "10"
+    services: "10"
+    secrets: "10"
+    configmaps: "10"
+
+# Network Policies
+networkPolicy:
+  enabled: true
+  ingress:
+    enabled: true
+  egress:
+    enabled: true
+
+# Pod Disruption Budgets
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Service Mesh (Istio) - Optional
+serviceMesh:
+  enabled: false
+  istio:
+    enabled: false
+    injection: disabled
