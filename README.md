@@ -1,6 +1,6 @@
-# 🤖 Unified AI Chat System
+# 🤖 AI Absence and SOW System
 
-A comprehensive AI-powered chat system for **Employee Absence Management** and **Statement of Work (SOW) Generation**, powered by Google Gemini 2.0 Flash.
+A sophisticated AI-powered platform with **color-coded workflows** for **Employee Absence Management** and **Statement of Work (SOW) Generation**, featuring an elegant monochrome glassmorphism design.
 
 ![Status](https://img.shields.io/badge/status-production--ready-green)
 ![Python](https://img.shields.io/badge/python-3.9+-blue)
