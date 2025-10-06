@@ -128,7 +128,7 @@ fi
 source venv/bin/activate
 pip install -q -r requirements.txt
 
-python unified_chat_server.py > /tmp/unified-backend.log 2>&1 &
+python run_server.py > /tmp/unified-backend.log 2>&1 &
 UNIFIED_PID=$!
 echo $UNIFIED_PID > /tmp/unified-backend.pid
 cd - > /dev/null

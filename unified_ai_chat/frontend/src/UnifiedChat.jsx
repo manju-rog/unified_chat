@@ -7,6 +7,7 @@ const UnifiedChat = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState(null);
   const [error, setError] = useState(null);
+  const [currentMode, setCurrentMode] = useState('unified'); // 'unified', 'sow', 'absence'
   
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -85,6 +86,11 @@ What would you like to do today?`,
       }
       
       // Add assistant response
+      // Auto-detect mode based on response
+      if (data.action_type && data.action_type.includes('absence') && currentMode === 'unified') {
+        setCurrentMode('absence');
+      }
+      
       const assistantMessage = {
         id: Date.now() + 1,
         role: 'assistant',
@@ -143,13 +149,34 @@ What would you like to do today?`,
     }
   }, [handleSendMessage]);
   
-  // Quick actions
-  const quickActions = [
-    "Who is absent today?",
-    "Show September absences",
-    "Create a SOW",
-    "Mark someone absent"
-  ];
+  // Quick actions - mode-aware
+  const getQuickActions = () => {
+    switch (currentMode) {
+      case 'sow':
+        return [
+          "Project overview",
+          "Add deliverables", 
+          "Set timeline",
+          "Define budget"
+        ];
+      case 'absence':
+        return [
+          "Who is absent today?",
+          "Show this month's absences",
+          "Mark someone absent",
+          "Check vacation days"
+        ];
+      default:
+        return [
+          "Who is absent today?",
+          "Show September absences",
+          "Create a SOW",
+          "Mark someone absent"
+        ];
+    }
+  };
+  
+  const quickActions = getQuickActions();
   
   const handleQuickAction = useCallback((action) => {
     setInputValue(action);
@@ -217,6 +244,11 @@ What would you like to do today?`,
   
   // Handle confirmation button click (Yes/No)
   const handleConfirmationClick = useCallback(async (buttonValue) => {
+    // Check if this is SOW initiation
+    if (buttonValue === "Start SOW generation") {
+      setCurrentMode('sow');
+    }
+    
     // Just send the button value as a regular message
     setInputValue(buttonValue);
     
@@ -274,6 +306,72 @@ What would you like to do today?`,
       setIsLoading(false);
     }
   }, [sessionId, API_BASE_URL, isLoading]);
+  
+  // Handle SOW mode initiation
+  const handleSOWInitiation = useCallback(async () => {
+    setCurrentMode('sow');
+    setInputValue('Start SOW generation');
+    
+    // Send SOW start message
+    const userMessage = {
+      id: Date.now(),
+      role: 'user',
+      content: 'Start SOW generation',
+      timestamp: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, userMessage]);
+    
+    try {
+      setIsLoading(true);
+      
+      const response = await fetch(`${API_BASE_URL}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: 'Start SOW generation',
+          session_id: sessionId
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      const assistantMessage = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: data.response,
+        timestamp: new Date().toISOString(),
+        metadata: {
+          actionType: data.action_type,
+          actionData: data.action_data
+        }
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+      
+    } catch (err) {
+      console.error('SOW initiation error:', err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [sessionId, API_BASE_URL]);
+  
+  // Handle exit SOW mode
+  const handleExitSOW = useCallback(() => {
+    setCurrentMode('unified');
+    const systemMessage = {
+      id: Date.now(),
+      role: 'system',
+      content: 'Exited SOW mode. You can now ask about absence management or start a new SOW.',
+      timestamp: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, systemMessage]);
+  }, []);
   
   // Render absence breakdown card
   const renderAbsenceBreakdown = useCallback((data) => {
@@ -431,7 +529,8 @@ What would you like to do today?`,
           )}
           
           {/* Confirmation buttons (Yes/No) */}
-          {message.metadata?.confirmationButtons && message.metadata.confirmationButtons.length > 0 && (
+          {message.metadata?.confirmationButtons && message.metadata.confirmationButtons.length > 0 && 
+           !(currentMode === 'sow' && message.metadata?.actionType === 'sow_initiation_suggested') && (
             <div className="confirmation-buttons">
               {message.metadata.confirmationButtons.map((button) => (
                 <button
@@ -446,6 +545,22 @@ What would you like to do today?`,
                   {button.label}
                 </button>
               ))}
+            </div>
+          )}
+          
+          {/* SOW Initiation Button - Removed as confirmation buttons handle this */}
+          
+          {/* Exit SOW Button - Only visible for assistant messages in SOW mode */}
+          {currentMode === 'sow' && message.role === 'assistant' && (
+            <div className="sow-exit-buttons">
+              <button
+                className="sow-exit-button"
+                onClick={handleExitSOW}
+                disabled={isLoading}
+              >
+                <span className="material-icons">exit_to_app</span>
+                Exit SOW
+              </button>
             </div>
           )}
           
@@ -483,11 +598,11 @@ What would you like to do today?`,
   const isExpanded = messages.length > 1;
   
   return (
-    <div className={`unified-chat-container ${isExpanded ? 'expanded' : ''}`}>
+    <div className={`unified-chat-container ${isExpanded ? 'expanded' : ''} ${currentMode}`}>
       {/* Hero Section - Only show when no messages */}
       {messages.length <= 1 && (
         <div className="hero-section">
-          <h1 className="hero-title">Smart Workforce Hub</h1>
+          <h1 className="hero-title">AI ABSENCE AND SOW</h1>
           <p className="hero-subtitle">Streamline absence tracking and generate professional documents with AI-powered assistance</p>
         </div>
       )}

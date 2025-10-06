@@ -975,6 +975,90 @@ body::after {
   }
 }
 
+/* ===== SOW INITIATION & EXIT BUTTONS ===== */
+.sow-initiation-buttons,
+.sow-exit-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.sow-initiate-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 4px 12px rgba(220, 38, 38, 0.4),
+    0 0 0 0 rgba(220, 38, 38, 0.4);
+  animation: sowPulse 3s ease-in-out infinite;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sow-initiate-button:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 
+    0 8px 20px rgba(220, 38, 38, 0.6),
+    0 0 30px rgba(220, 38, 38, 0.4);
+}
+
+.sow-exit-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: rgba(107, 114, 128, 0.2);
+  color: #6b7280;
+  border: 1px solid rgba(107, 114, 128, 0.3);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.sow-exit-button:hover:not(:disabled) {
+  background: rgba(107, 114, 128, 0.3);
+  border-color: rgba(107, 114, 128, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.2);
+}
+
+.sow-initiate-button:disabled,
+.sow-exit-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.sow-initiate-button .material-icons,
+.sow-exit-button .material-icons {
+  font-size: 20px;
+}
+
+@keyframes sowPulse {
+  0%, 100% {
+    box-shadow: 
+      0 4px 12px rgba(220, 38, 38, 0.4),
+      0 0 0 0 rgba(220, 38, 38, 0.4);
+  }
+  50% {
+    box-shadow: 
+      0 4px 12px rgba(220, 38, 38, 0.4),
+      0 0 0 10px rgba(220, 38, 38, 0.1);
+  }
+}
+
 /* ==
 === ABSENCE BREAKDOWN CARD - FUTURISTIC ===== */
 .absence-breakdown-card {
@@ -1038,11 +1122,12 @@ body::after {
 }
 
 .breakdown-table {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border-radius: 16px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .breakdown-table-header {
@@ -1050,14 +1135,14 @@ body::after {
   grid-template-columns: 2fr 1.5fr 3fr;
   gap: 20px;
   padding: 16px 24px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   font-weight: 600;
   font-size: 12px;
   letter-spacing: 1px;
   text-transform: uppercase;
-  color: #8b5cf6;
+  color: #374151;
 }
 
 .breakdown-table-body {
@@ -1070,14 +1155,14 @@ body::after {
   grid-template-columns: 2fr 1.5fr 3fr;
   gap: 20px;
   padding: 18px 24px;
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.6);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
 }
 
 .breakdown-row:hover {
-  background: rgba(139, 92, 246, 0.05);
-  border-color: rgba(139, 92, 246, 0.2);
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(0, 0, 0, 0.15);
 }
 
 .breakdown-row:last-child {
@@ -1086,7 +1171,7 @@ body::after {
 
 .employee-name {
   font-weight: 600;
-  color: #f1f5f9;
+  color: #1f2937;
   font-size: 16px;
   letter-spacing: 0.2px;
 }
@@ -1124,23 +1209,26 @@ body::after {
 
 .date-pill {
   display: inline-block;
-  padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.05);
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #cbd5e1;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
   transition: all 0.3s ease;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-width: 60px;
+  text-align: center;
 }
 
 .date-pill:hover {
-  border-color: rgba(139, 92, 246, 0.4);
-  background: rgba(139, 92, 246, 0.1);
+  border-color: rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 1);
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(139, 92, 246, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .breakdown-empty {
@@ -1331,4 +1419,143 @@ body::after {
     0 0 0 1px rgba(255, 255, 255, 0.1),
     0 0 30px rgba(139, 92, 246, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+/
+* ===== MODE-BASED COLOR THEMES ===== */
+
+/* SOW Mode - Red Theme */
+.unified-chat-container.sow .chat-card::before {
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(220, 38, 38, 0.8), 
+    rgba(239, 68, 68, 0.8), 
+    transparent);
+}
+
+.unified-chat-container.sow .header-icon {
+  color: #dc2626;
+  filter: drop-shadow(0 0 8px rgba(220, 38, 38, 0.6));
+}
+
+.unified-chat-container.sow .session-badge {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+.unified-chat-container.sow .session-badge::before {
+  content: "SOW Mode • ";
+}
+
+.unified-chat-container.sow .send-button {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  box-shadow: 
+    0 4px 12px rgba(220, 38, 38, 0.4),
+    0 0 0 0 rgba(220, 38, 38, 0.4);
+}
+
+.unified-chat-container.sow .send-button:hover:not(:disabled) {
+  box-shadow: 
+    0 6px 16px rgba(220, 38, 38, 0.6),
+    0 0 20px rgba(220, 38, 38, 0.4);
+}
+
+.unified-chat-container.sow .quick-action-chip:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.1);
+  border-color: rgba(220, 38, 38, 0.4);
+  box-shadow: 
+    0 4px 12px rgba(220, 38, 38, 0.3),
+    0 0 15px rgba(220, 38, 38, 0.2);
+}
+
+/* Absence Mode - Blue Theme */
+.unified-chat-container.absence .chat-card::before {
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(37, 99, 235, 0.8), 
+    rgba(59, 130, 246, 0.8), 
+    transparent);
+}
+
+.unified-chat-container.absence .header-icon {
+  color: #2563eb;
+  filter: drop-shadow(0 0 8px rgba(37, 99, 235, 0.6));
+}
+
+.unified-chat-container.absence .session-badge {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.1);
+  border: 1px solid rgba(37, 99, 235, 0.3);
+}
+
+.unified-chat-container.absence .session-badge::before {
+  content: "Absence Mode • ";
+}
+
+.unified-chat-container.absence .send-button {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  box-shadow: 
+    0 4px 12px rgba(37, 99, 235, 0.4),
+    0 0 0 0 rgba(37, 99, 235, 0.4);
+}
+
+.unified-chat-container.absence .send-button:hover:not(:disabled) {
+  box-shadow: 
+    0 6px 16px rgba(37, 99, 235, 0.6),
+    0 0 20px rgba(37, 99, 235, 0.4);
+}
+
+.unified-chat-container.absence .quick-action-chip:hover:not(:disabled) {
+  background: rgba(37, 99, 235, 0.1);
+  border-color: rgba(37, 99, 235, 0.4);
+  box-shadow: 
+    0 4px 12px rgba(37, 99, 235, 0.3),
+    0 0 15px rgba(37, 99, 235, 0.2);
+}
+
+/* Mode Transition Animations */
+.unified-chat-container {
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.unified-chat-container.sow,
+.unified-chat-container.absence {
+  animation: modeTransition 0.8s ease-out;
+}
+
+@keyframes modeTransition {
+  from {
+    opacity: 0.8;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Enhanced SOW Mode Styling */
+.unified-chat-container.sow .message.assistant .message-text {
+  border-left: 3px solid rgba(220, 38, 38, 0.5);
+  background: linear-gradient(135deg, 
+    rgba(220, 38, 38, 0.05) 0%, 
+    rgba(239, 68, 68, 0.05) 100%);
+}
+
+.unified-chat-container.sow .typing-dot {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  box-shadow: 0 0 10px rgba(220, 38, 38, 0.5);
+}
+
+/* Enhanced Absence Mode Styling */
+.unified-chat-container.absence .message.assistant .message-text {
+  border-left: 3px solid rgba(37, 99, 235, 0.5);
+  background: linear-gradient(135deg, 
+    rgba(37, 99, 235, 0.05) 0%, 
+    rgba(59, 130, 246, 0.05) 100%);
+}
+
+.unified-chat-container.absence .typing-dot {
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
 }

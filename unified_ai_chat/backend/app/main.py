@@ -135,6 +135,30 @@ async def chat_endpoint(
     
     session.add_message("user", user_message)
 
+    # Check for SOW initiation request
+    sow_keywords = ["sow", "statement of work", "document generation", "create document", "generate document"]
+    if any(keyword in user_message.lower() for keyword in sow_keywords) and not session.sow_state:
+        # Suggest SOW initiation
+        return ChatResponse(
+            session_id=session.session_id,
+            response="I can help you create a professional Statement of Work document! Shall we start the SOW generation process?",
+            action_type="sow_initiation_suggested",
+            confirmation_buttons=[
+                ConfirmationButton(
+                    id="sow_start",
+                    label="Generate SOW",
+                    value="Start SOW generation",
+                    style="primary"
+                ),
+                ConfirmationButton(
+                    id="sow_cancel",
+                    label="Not now",
+                    value="no",
+                    style="secondary"
+                )
+            ]
+        )
+
     parsed: Dict[str, Any] = {"tool_calls": [], "text": ""}
     tool_calls: List[ToolCall] = []
 
