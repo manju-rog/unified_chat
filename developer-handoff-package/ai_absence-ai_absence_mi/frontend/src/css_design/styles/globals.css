@@ -1,0 +1,52 @@
+/* src/styles/globals.css */
+
+/* Import CSS Variables and Base Styles */
+@import './variables.css';
+@import './base.css';
+
+/* Import Component Styles */
+@import '../components/Layout/Header.css';
+@import '../components/Layout/Sidebar.css';
+@import '../components/Layout/Layout.css';
+
+@import '../components/UI/Button.css';
+@import '../components/UI/Modal.css';
+@import '../components/UI/AddEmployeeModal.css';
+@import '../components/UI/EmailModal.css';
+@import '../components/UI/Toast.css';
+@import '../components/UI/DataTable.css';
+@import '../components/UI/SearchInput.css';
+
+@import '../components/Views/ComingSoon.css';
+@import '../components/Views/EmployeeManagement.css';
+@import '../components/Views/AbsenceGrid.css';
+@import '../components/Views/AbsenceGridCells.css';
+@import '../components/Views/AbsenceGridFilters.css';
+
+
+/* 
+  🎉 CSS REFACTORING COMPLETE!
+  
+  All component-specific styles have been moved to their respective CSS files.
+  This file now only imports the modular CSS files for better organization.
+  
+  ✅ Benefits:
+  - Better maintainability - each component has its own CSS file
+  - Component-specific styling - easy to find and modify styles
+  - Easier debugging - no more hunting through a massive file
+  - Modular architecture - CSS follows React component structure
+  - Better team collaboration - multiple developers can work on different components
+  
+  📁 File Structure:
+  - variables.css - CSS custom properties (colors, fonts, spacing)
+  - base.css - Reset styles and base layout
+  - Layout/ - Header, Sidebar, Layout components
+  - UI/ - Reusable UI components (Button, Modal, Toast, etc.)
+  - Views/ - Page-specific components (Dashboard, EmployeeManagement, etc.)
+  - Charts/ - Chart-related components
+  
+  🔧 To add new component styles:
+  1. Create ComponentName.css in the appropriate folder
+  2. Import it in the component: import './ComponentName.css'
+  3. Add the import here if it's a global component
+*/

@@ -1,0 +1,7 @@
+-- Initialize sample employees if they don't exist
+INSERT OR IGNORE INTO employees (id, name, email, phone_number, department, role, location, manager, join_date, employee_id, system_name, system_ip, created_at, updated_at) VALUES
+(1, 'Manju', 'manju@company.com', '+91-9876543210', 'Management', 'Engineering Manager', 'Bengaluru', NULL, '2023-01-15', 'LDNR-MGR-01', 'MANJU-LAPTOP', '192.168.1.100', '2024-01-01', '2024-01-01'),
+(2, 'Shreyas', 'shreyas@company.com', '+91-9876543211', 'Development', 'Senior Developer', 'Bengaluru', 'Manju', '2023-03-20', 'LDNR-DEV-02', 'SHREYAS-DESKTOP', '192.168.1.101', '2024-01-01', '2024-01-01'),
+(3, 'Ganesh', 'ganesh@company.com', '+91-9876543212', 'Development', 'Full Stack Developer', 'Bengaluru', 'Manju', '2023-05-10', 'LDNR-DEV-03', 'GANESH-LAPTOP', '192.168.1.102', '2024-01-01', '2024-01-01'),
+(4, 'Suhas', 'suhas@company.com', '+91-9876543213', 'Development', 'Tech Lead', 'Bengaluru', 'Manju', '2023-02-28', 'LDNR-DEV-04', 'SUHAS-WORKSTATION', '192.168.1.103', '2024-01-01', '2024-01-01'),
+(5, 'Anushri', 'anushri@company.com', '+91-9876543214', 'Quality Assurance', 'QA Lead', 'Bengaluru', 'Manju', '2023-04-15', 'LDNR-QA-05', 'ANUSHRI-LAPTOP', '192.168.1.104', '2024-01-01', '2024-01-01');

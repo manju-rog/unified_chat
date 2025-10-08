@@ -1,0 +1,393 @@
+/* Grid Filters */
+.grid-filters {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 20px 24px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.grid-filters-left {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+
+.grid-filters-right {
+  display: flex;
+  align-items: center;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.filter-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  margin-bottom: 2px;
+}
+
+.filter-select {
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 14px;
+  color: #374151;
+  min-width: 160px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.filter-select:hover {
+  border-color: #cbd5e1;
+}
+
+.clear-filters-btn {
+  padding: 10px 16px !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: #64748b !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  cursor: pointer !important;
+}
+
+.clear-filters-btn:hover {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+.clear-filters-btn .material-icons {
+  font-size: 18px !important;
+}
+
+/* Date Picker Styles */
+.date-picker-group {
+  position: relative;
+  z-index: 1;
+}
+
+.date-picker-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.date-nav-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.date-nav-btn .material-icons {
+  font-size: 18px;
+}
+
+.date-picker-main {
+  position: relative;
+  z-index: 1;
+}
+
+.date-display-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  min-width: 180px;
+}
+
+.date-display-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.date-display-btn.current-month {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+  color: #1d4ed8;
+}
+
+.date-text {
+  font-weight: 600;
+  flex: 1;
+}
+
+.date-picker-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  z-index: 9999;
+  padding: 20px;
+  margin-top: 4px;
+  min-width: 320px;
+  max-width: 400px;
+  width: max-content;
+}
+
+.date-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.date-picker-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.close-picker {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.close-picker:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.year-selection {
+  margin-bottom: 16px;
+}
+
+.year-selection label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.year-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 14px;
+  color: #374151;
+}
+
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.month-btn {
+  padding: 12px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  font-size: 14px;
+}
+
+.month-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.month-btn.selected {
+  background: #3b82f6;
+  color: #ffffff;
+  border-color: #3b82f6;
+}
+
+.month-btn.current {
+  border-color: #10b981;
+  background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%);
+  color: #047857;
+}
+
+.month-name {
+  display: block;
+  font-weight: 600;
+}
+
+.month-short {
+  display: none;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.date-picker-actions {
+  display: flex;
+  justify-content: center;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.current-month-btn {
+  margin-left: 8px;
+}
+
+.current-month-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #10b981;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.current-month-indicator .material-icons {
+  font-size: 16px;
+}
+
+/* Changes indicator */
+.changes-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-warning);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.changes-note .material-icons {
+  font-size: 18px;
+}
+
+/* Responsive Design for Filters */
+@media (max-width: 1024px) {
+  .grid-filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-4);
+  }
+
+  .grid-filters-left {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .filter-group {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .filter-select {
+    flex: 1;
+    margin-left: var(--space-3);
+  }
+
+  .date-picker-container {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .month-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .month-name {
+    display: none;
+  }
+
+  .month-short {
+    display: block;
+  }
+}
+
+/* Ensure date picker modal stays within viewport */
+@media (max-width: 480px) {
+  .date-picker-dropdown {
+    left: -50px;
+    right: -50px;
+    min-width: 280px;
+    max-width: 320px;
+  }
+}
+
+/* Fix for modal positioning on smaller screens */
+.date-picker-container {
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure modal doesn't get cut off */
+.grid-filters {
+  position: relative;
+  z-index: 2;
+  overflow: visible;
+}
+
+/* Additional z-index management */
+.absence-grid-view {
+  position: relative;
+  z-index: 1;
+}
+
+.view__header {
+  position: relative;
+  z-index: 1;
+}

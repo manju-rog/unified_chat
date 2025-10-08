@@ -1,0 +1,335 @@
+/* Employee Management Styles */
+.employee-management,
+.employee-management-clean {
+  max-width: 1400px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.clean-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  z-index: -1;
+}
+
+.employee-filters {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-card-border);
+  padding: var(--space-5);
+  margin-bottom: var(--space-6);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.filter-section {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.filter-dropdown {
+  padding: var(--space-3);
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  font-size: var(--font-size-sm);
+  min-width: 140px;
+  cursor: pointer;
+}
+
+.filter-dropdown:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+/* Employee Table Styles */
+.employee-table-container {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-card-border);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.employee-table-wrapper {
+  overflow-x: auto;
+}
+
+.employee-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.employee-table thead {
+  background: var(--color-background);
+  border-bottom: 2px solid var(--color-card-border);
+}
+
+.employee-table th {
+  padding: var(--space-4) var(--space-3);
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.employee-table td {
+  padding: var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--color-card-border);
+  vertical-align: middle;
+}
+
+.employee-table tbody tr {
+  transition: background-color 0.2s;
+}
+
+.employee-table tbody tr:hover {
+  background-color: rgba(25, 118, 210, 0.02);
+}
+
+.row-selected {
+  background-color: rgba(25, 118, 210, 0.05) !important;
+}
+
+/* Table Column Styles */
+.checkbox-column {
+  width: 40px;
+  text-align: center;
+}
+
+.table-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+.name-column {
+  min-width: 200px;
+}
+
+.employee-name-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.employee-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.employee-name {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+.email-column {
+  min-width: 220px;
+}
+
+.employee-email {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.department-column {
+  min-width: 140px;
+}
+
+.department-badge {
+  display: inline-block;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.department-badge--development {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.department-badge--quality-assurance {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.department-badge--design {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+
+.department-badge--human-resources {
+  background: #e8f5e8;
+  color: #2e7d32;
+}
+
+.department-badge--management {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.role-column {
+  min-width: 160px;
+}
+
+.employee-role {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.location-column {
+  min-width: 100px;
+}
+
+.employee-location {
+  color: var(--color-text-secondary);
+}
+
+.system-column {
+  min-width: 140px;
+}
+
+.system-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.system-name {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xs);
+}
+
+.system-ip {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-family: 'Courier New', monospace;
+}
+
+.actions-column {
+  width: 80px;
+  text-align: center;
+}
+
+/* Table Footer */
+.table-footer {
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-card-border);
+  padding: var(--space-4) var(--space-5);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  margin-top: -1px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.results-info {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.selection-info {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+  margin-left: var(--space-2);
+}
+
+.bulk-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .employee-filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-4);
+  }
+  
+  .filter-section {
+    justify-content: space-between;
+  }
+  
+  .filter-dropdown {
+    flex: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .employee-table th,
+  .employee-table td {
+    padding: var(--space-2);
+  }
+  
+  .employee-name-cell {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+  
+  .system-column,
+  .location-column {
+    display: none;
+  }
+  
+  .actions-column {
+    width: 60px;
+  }
+  
+  .table-footer {
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: stretch;
+  }
+  
+  .bulk-actions {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .employee-table th,
+  .employee-table td {
+    font-size: var(--font-size-xs);
+    padding: var(--space-1);
+  }
+  
+  .employee-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 10px;
+  }
+  
+  .department-column,
+  .role-column {
+    display: none;
+  }
+}

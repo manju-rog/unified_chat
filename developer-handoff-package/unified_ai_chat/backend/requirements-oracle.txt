@@ -1,0 +1,4 @@
+# Oracle Database Dependencies
+cx_Oracle==8.3.0
+SQLAlchemy[oracle]==2.0.23
+oracledb==1.4.2

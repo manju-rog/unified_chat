@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: ai-absence-sow
+data:
+  # Database Configuration
+  DB_HOST: "postgres-service"
+  DB_PORT: "5432"
+  DB_NAME: "ai_absence_db"
+  
+  # API URLs
+  BACKEND_URL: "http://backend-service:5002"
+  ABSENCE_SERVICE_URL: "http://absence-service:8080"
+  FRONTEND_URL: "http://frontend-service:80"
+  
+  # Application Settings
+  APP_ENV: "production"
+  LOG_LEVEL: "INFO"

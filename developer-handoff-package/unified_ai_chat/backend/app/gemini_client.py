@@ -29,7 +29,6 @@ class GeminiClient:
             system_instruction=self._system_prompt(),
         )
 
-
     def generate(self, session: SessionState, user_message: str, context: Optional[str] = None) -> Dict[str, Any]:
         """Generate a response from Gemini including potential tool calls."""
 
@@ -50,7 +49,6 @@ class GeminiClient:
             messages,
             tool_config={"function_calling_config": {"mode": "AUTO"}},
         )
-        
         return response
 
     def parse_response(self, response: Any) -> Dict[str, Any]:
@@ -78,7 +76,6 @@ class GeminiClient:
                     except json.JSONDecodeError:
                         args = {"value": raw_args}
                 else:
-                    # Use dict() for tool execution, safe serialization only for debug
                     args = dict(raw_args)
                 tool_calls.append(ToolCall(name=name, arguments=args))
             elif getattr(part, "text", None):
@@ -88,8 +85,6 @@ class GeminiClient:
             "tool_calls": tool_calls,
             "text": "\n".join(fragment for fragment in text_fragments if fragment),
         }
-
-
 
     @staticmethod
     def _system_prompt() -> str:

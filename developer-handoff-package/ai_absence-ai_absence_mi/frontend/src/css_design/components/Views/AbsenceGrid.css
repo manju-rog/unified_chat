@@ -1,0 +1,191 @@
+/* Absence Grid Main Styles */
+.absence-grid-view {
+  max-width: none;
+  width: 100%;
+}
+
+/* Absence Grid Container */
+.absence-grid-container {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-card-border);
+  overflow: hidden;
+  margin-bottom: var(--space-6);
+  position: relative;
+}
+
+.absence-grid {
+  overflow-x: auto;
+  overflow-y: visible;
+  min-width: 100%;
+  position: relative;
+}
+
+.grid-header {
+  display: flex;
+  background: var(--color-background);
+  border-bottom: 2px solid var(--color-card-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.employee-header {
+  min-width: 180px;
+  width: 180px;
+  padding: var(--space-3) var(--space-4);
+  font-weight: var(--font-weight-semibold);
+  border-right: 1px solid var(--color-card-border);
+  display: flex;
+  align-items: center;
+  background: var(--color-background);
+  position: sticky;
+  left: 0;
+  z-index: 15;
+}
+
+.day-header {
+  min-width: 40px;
+  width: 40px;
+  padding: var(--space-3) var(--space-2);
+  text-align: center;
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+  border-right: 1px solid var(--color-card-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.day-header.today {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  color: #1d4ed8;
+  font-weight: var(--font-weight-bold);
+}
+
+.day-number {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.day-name {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.employee-row {
+  display: flex;
+  border-bottom: 1px solid var(--color-card-border);
+}
+
+.employee-row:hover {
+  background: rgba(25, 118, 210, 0.02);
+}
+
+.employee-info {
+  min-width: 180px;
+  width: 180px;
+  padding: var(--space-3) var(--space-4);
+  border-right: 1px solid var(--color-card-border);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--color-surface);
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
+}
+
+.employee-name {
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.employee-dept {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .employee-info {
+    min-width: 120px;
+  }
+
+  .employee-header {
+    min-width: 120px;
+  }
+}/* Fix for
+ horizontal scrolling with sticky columns */
+.grid-header,
+.employee-row {
+  position: relative;
+}
+
+/* Ensure employee info stays visible during scroll */
+.employee-row:hover .employee-info {
+  box-shadow: 4px 0 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Better scrollbar styling */
+.absence-grid::-webkit-scrollbar {
+  height: 8px;
+}
+
+.absence-grid::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.absence-grid::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.absence-grid::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Ensure proper layering */
+.absence-grid-container {
+  isolation: isolate;
+}
+
+/* Fix for mobile scrolling */
+@media (max-width: 768px) {
+  .employee-info {
+    min-width: 120px;
+    width: 120px;
+  }
+
+  .employee-header {
+    min-width: 120px;
+    width: 120px;
+  }
+  
+  .absence-grid {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Ensure cells don't interfere with sticky positioning */
+.absence-cell {
+  position: relative;
+  z-index: 1;
+}
+
+.absence-cell:hover {
+  z-index: 2;
+}
+
+.absence-cell.editing {
+  z-index: 3;
+}

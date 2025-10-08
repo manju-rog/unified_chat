@@ -58,9 +58,6 @@ async def health(settings: Settings = Depends(get_app_settings)) -> Dict[str, An
     }
 
 
-
-
-
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat_endpoint(
     request: ChatRequest,
@@ -73,13 +70,7 @@ async def chat_endpoint(
     user_message = request.message.strip()
     
     # Handle confirmation responses (yes/no) for pending actions
-    user_lower = user_message.lower()
-    is_yes_response = (user_lower in ["yes", "y", "yeah", "yep", "sure", "ok", "okay"] or 
-                      "yes" in user_lower or "add reason" in user_lower)
-    is_no_response = (user_lower in ["no", "n", "nope", "cancel", "skip"] or 
-                     "no" in user_lower or "skip" in user_lower)
-    
-    if is_yes_response:
+    if user_message.lower() in ["yes", "y", "yeah", "yep", "sure", "ok", "okay"]:
         pending_action = session.metadata.get("pending_action")
         if pending_action:
             action_type = pending_action.get("type")
@@ -101,7 +92,7 @@ async def chat_endpoint(
             session.metadata.pop("pending_context", None)
             background_tasks.add_task(session_manager.cleanup_expired)
             return result
-    elif is_no_response:
+    elif user_message.lower() in ["no", "n", "nope", "cancel"]:
         pending_action = session.metadata.get("pending_action")
         if pending_action:
             action_type = pending_action.get("type")

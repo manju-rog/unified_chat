@@ -1,0 +1,106 @@
+/* Data Table Styles */
+.table-container {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-card-border);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.data-table thead {
+  background: var(--color-background);
+  border-bottom: 2px solid var(--color-card-border);
+}
+
+.data-table th {
+  padding: var(--space-4) var(--space-3);
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--color-card-border);
+  vertical-align: middle;
+}
+
+.data-table tbody tr {
+  transition: background-color 0.2s;
+}
+
+.data-table tbody tr:hover {
+  background-color: rgba(25, 118, 210, 0.02);
+}
+
+.table-actions {
+  display: flex;
+  gap: var(--space-1);
+  justify-content: center;
+}
+
+.action-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+}
+
+.action-btn .material-icons {
+  font-size: 16px;
+}
+
+.action-btn--edit {
+  color: var(--color-primary);
+}
+
+.action-btn--edit:hover {
+  background: rgba(25, 118, 210, 0.1);
+}
+
+.action-btn--view {
+  color: var(--color-text-secondary);
+}
+
+.action-btn--view:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--color-text-primary);
+}
+
+.action-btn--download {
+  color: var(--color-success);
+}
+
+.action-btn--download:hover:not(:disabled) {
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .data-table th,
+  .data-table td {
+    padding: var(--space-2);
+    font-size: var(--font-size-xs);
+  }
+}

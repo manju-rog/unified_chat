@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-absence-sow
+  labels:
+    name: ai-absence-sow
+    app: ai-absence-system

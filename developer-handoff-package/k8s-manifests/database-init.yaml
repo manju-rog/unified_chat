@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-scripts
+  namespace: ai-absence-sow
+data:
+  01-init-database.sql: |
+    -- AI Absence & SOW System Database Schema
+    
+    -- Create employees table
+    CREATE TABLE IF NOT EXISTS employees (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        department VARCHAR(100),
+        position VARCHAR(100),
+        hire_date DATE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    -- Create absence_requests table
+    CREATE TABLE IF NOT EXISTS absence_requests (
+        id SERIAL PRIMARY KEY,
+        employee_id INTEGER REFERENCES employees(id),
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        absence_type VARCHAR(50) NOT NULL,
+        reason TEXT,
+        status VARCHAR(20) DEFAULT 'pending',
+        approved_by INTEGER REFERENCES employees(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    -- Create sow_requests table
+    CREATE TABLE IF NOT EXISTS sow_requests (
+        id SERIAL PRIMARY KEY,
+        employee_id INTEGER REFERENCES employees(id),
+        project_name VARCHAR(255) NOT NULL,
+        description TEXT,
+        start_date DATE,
+        end_date DATE,
+        budget DECIMAL(10,2),
+        status VARCHAR(20) DEFAULT 'draft',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    -- Create chat_sessions table
+    CREATE TABLE IF NOT EXISTS chat_sessions (
+        id SERIAL PRIMARY KEY,
+        session_id VARCHAR(255) UNIQUE NOT NULL,
+        employee_id INTEGER REFERENCES employees(id),
+        session_type VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    -- Create indexes for better performance
+    CREATE INDEX IF NOT EXISTS idx_employees_email ON employees(email);
+    CREATE INDEX IF NOT EXISTS idx_absence_requests_employee_id ON absence_requests(employee_id);
+    CREATE INDEX IF NOT EXISTS idx_absence_requests_dates ON absence_requests(start_date, end_date);
+    CREATE INDEX IF NOT EXISTS idx_sow_requests_employee_id ON sow_requests(employee_id);
+    CREATE INDEX IF NOT EXISTS idx_chat_sessions_session_id ON chat_sessions(session_id);
+    
+  02-seed-data.sql: |
+    -- Sample data for development/testing
+    
+    -- Insert sample employees
+    INSERT INTO employees (name, email, department, position, hire_date) VALUES
+    ('John Doe', 'john.doe@company.com', 'Engineering', 'Senior Developer', '2022-01-15'),
+    ('Jane Smith', 'jane.smith@company.com', 'Engineering', 'Product Manager', '2021-06-01'),
+    ('Mike Johnson', 'mike.johnson@company.com', 'HR', 'HR Manager', '2020-03-10'),
+    ('Sarah Wilson', 'sarah.wilson@company.com', 'Engineering', 'DevOps Engineer', '2022-08-20'),
+    ('David Brown', 'david.brown@company.com', 'Finance', 'Financial Analyst', '2021-11-05')
+    ON CONFLICT (email) DO NOTHING;
+    
+    -- Insert sample absence requests
+    INSERT INTO absence_requests (employee_id, start_date, end_date, absence_type, reason, status) VALUES
+    (1, '2024-02-15', '2024-02-16', 'vacation', 'Family vacation', 'approved'),
+    (2, '2024-02-20', '2024-02-20', 'sick', 'Medical appointment', 'pending'),
+    (3, '2024-03-01', '2024-03-05', 'vacation', 'Spring break', 'approved')
+    ON CONFLICT DO NOTHING;
+    
+    -- Insert sample SOW requests
+    INSERT INTO sow_requests (employee_id, project_name, description, start_date, end_date, budget, status) VALUES
+    (1, 'Mobile App Development', 'Develop mobile application for customer portal', '2024-03-01', '2024-06-30', 50000.00, 'approved'),
+    (2, 'Database Migration', 'Migrate legacy database to cloud infrastructure', '2024-02-15', '2024-04-15', 25000.00, 'draft')
+    ON CONFLICT DO NOTHING;
