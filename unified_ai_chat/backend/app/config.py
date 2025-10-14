@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     )
 
     gemini_api_key: str = Field(..., env="GEMINI_API_KEY")
-    gemini_model: str = Field("gemini-2.0-flash-exp", env="GEMINI_MODEL")
+    gemini_model: str = Field("gemini-2.0-flash", env="GEMINI_MODEL")
     absence_api_base: AnyHttpUrl = Field("http://localhost:8080/api", env="ABSENCE_API_URL")
 
     sow_project_root: Path = Field(

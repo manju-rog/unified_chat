@@ -522,6 +522,43 @@ body::after {
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
+/* Light explanations styling */
+.message-text em,
+.message-text i {
+  color: #6b7280;
+  font-style: italic;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+/* Bold main responses */
+.message-text strong,
+.message-text b {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+/* Enhanced list styling for suggestions */
+.message-text ul {
+  margin: 12px 0;
+  padding-left: 0;
+}
+
+.message-text li {
+  list-style: none;
+  margin: 8px 0;
+  padding-left: 20px;
+  position: relative;
+}
+
+.message-text li::before {
+  content: "•";
+  color: #3b82f6;
+  font-weight: bold;
+  position: absolute;
+  left: 0;
+}
+
 .message.user .message-text {
   background: linear-gradient(135deg,
       rgba(31, 41, 55, 0.9) 0%,

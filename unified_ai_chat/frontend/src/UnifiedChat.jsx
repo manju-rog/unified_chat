@@ -1,6 +1,23 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './UnifiedChat.css';
 
+// Simple markdown formatter for message content
+const formatMessageContent = (content) => {
+  if (!content) return '';
+  
+  return content
+    // Convert *italic* to <em>
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    // Convert **bold** to <strong>
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    // Convert bullet points
+    .replace(/^• (.+)$/gm, '<li>$1</li>')
+    // Wrap consecutive <li> elements in <ul>
+    .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+    // Convert line breaks
+    .replace(/\n/g, '<br/>');
+};
+
 const UnifiedChat = () => {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
@@ -87,8 +104,14 @@ What would you like to do today?`,
       
       // Add assistant response
       // Auto-detect mode based on response
-      if (data.action_type && data.action_type.includes('absence') && currentMode === 'unified') {
-        setCurrentMode('absence');
+      if (data.action_type) {
+        if (data.action_type.includes('absence') && currentMode === 'unified') {
+          setCurrentMode('absence');
+        } else if (data.action_type.includes('sow') && !data.action_type.includes('exit')) {
+          setCurrentMode('sow');
+        } else if (data.action_type === 'sow_exit') {
+          setCurrentMode('unified');
+        }
       }
       
       const assistantMessage = {
@@ -244,9 +267,13 @@ What would you like to do today?`,
   
   // Handle confirmation button click (Yes/No)
   const handleConfirmationClick = useCallback(async (buttonValue) => {
-    // Check if this is SOW initiation
-    if (buttonValue === "Start SOW generation") {
+    // Check for mode changes
+    if (buttonValue === "Start SOW generation" || buttonValue === "Create a SOW") {
       setCurrentMode('sow');
+    } else if (buttonValue.includes("absent") || buttonValue.includes("Who is absent")) {
+      setCurrentMode('absence');
+    } else if (buttonValue === "exit sow" || buttonValue === "Exit SOW Mode") {
+      setCurrentMode('unified');
     }
     
     // Just send the button value as a regular message
@@ -509,7 +536,7 @@ What would you like to do today?`,
           {avatar}
         </div>
         <div className="message-content">
-          <div className="message-text">{message.content}</div>
+          <div className="message-text" dangerouslySetInnerHTML={{__html: formatMessageContent(message.content)}}></div>
           
           {/* Disambiguation buttons */}
           {message.metadata?.disambiguationOptions && message.metadata.disambiguationOptions.length > 0 && (

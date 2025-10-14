@@ -14,7 +14,7 @@ from .config import Settings, get_settings
 from .gemini_client import ToolCall, gemini_client
 from .models import ChatRequest, ChatResponse, ConfirmationButton, DisambiguationOption, SessionState
 from .services.absence import absence_adapter
-from .services.sow import sow_adapter
+from .services.sow_direct import intelligent_sow_adapter
 from .session_manager import session_manager
 
 SOW_STATE_TO_SECTION = {
@@ -142,20 +142,407 @@ async def chat_endpoint(
             background_tasks.add_task(session_manager.cleanup_expired)
             return result
     
+    # Handle SOW service selection buttons
+    if user_message.lower() in ["standard", "custom"] and session.active_domain == "sow":
+        session.add_message("user", user_message)
+        result = await intelligent_sow_adapter.process_user_input(session, user_message)
+        
+        return ChatResponse(
+            session_id=session.session_id,
+            response=result.get("message", "Service selection processed."),
+            action_type="sow_service_selected" if result.get("success") else "sow_error",
+            action_data={"next_step": result.get("next_step")},
+            confirmation_buttons=[
+                ConfirmationButton(
+                    id="sow_exit",
+                    label="Exit SOW Mode",
+                    value="exit sow",
+                    style="secondary"
+                )
+            ] if result.get("success") else None
+        )
+    
+    # Handle SOW conversation flow - CRITICAL: Process SOW inputs directly
+    if session.active_domain == "sow" and hasattr(session, 'sow_session_id') and session.sow_session_id:
+        session.add_message("user", user_message)
+        
+        try:
+            # Route directly to SOW adapter - DIRECT: Just store user input
+            result = await intelligent_sow_adapter.process_user_input(session, user_message)
+            
+            # Always include exit button
+            base_buttons = [
+                ConfirmationButton(
+                    id="sow_exit",
+                    label="Exit SOW Mode",
+                    value="exit sow",
+                    style="secondary"
+                )
+            ]
+            
+            # Add service selection buttons if needed
+            confirmation_buttons = base_buttons
+            if result.get("show_service_buttons"):
+                service_buttons = [
+                    ConfirmationButton(
+                        id="service_standard",
+                        label="Standard Service Package",
+                        value="standard",
+                        style="primary"
+                    ),
+                    ConfirmationButton(
+                        id="service_custom",
+                        label="Custom Services",
+                        value="custom",
+                        style="secondary"
+                    )
+                ]
+                confirmation_buttons = service_buttons + base_buttons
+            
+            # Add generate button if ready
+            if result.get("can_generate"):
+                generate_buttons = [
+                    ConfirmationButton(
+                        id="generate_sow",
+                        label="Generate SOW Document",
+                        value="generate",
+                        style="primary"
+                    )
+                ]
+                confirmation_buttons = generate_buttons + base_buttons
+            
+            # Add contact dropdown options if needed
+            if result.get("contact_options"):
+                # Create contact selection buttons
+                contact_buttons = []
+                clients = result["contact_options"]["clients"]
+                contractors = result["contact_options"]["contractors"]
+                
+                # For now, show first few options as buttons
+                if clients and contractors:
+                    contact_buttons.extend([
+                        ConfirmationButton(
+                            id="contact_quick_1",
+                            label=f"{clients[0]} + {contractors[0]}",
+                            value=f"client:{clients[0]},contractor:{contractors[0]}",
+                            style="primary"
+                        ),
+                        ConfirmationButton(
+                            id="contact_quick_2", 
+                            label=f"{clients[1] if len(clients) > 1 else clients[0]} + {contractors[1] if len(contractors) > 1 else contractors[0]}",
+                            value=f"client:{clients[1] if len(clients) > 1 else clients[0]},contractor:{contractors[1] if len(contractors) > 1 else contractors[0]}",
+                            style="secondary"
+                        )
+                    ])
+                
+                confirmation_buttons = contact_buttons + base_buttons
+            
+            # Add resource builder buttons if needed
+            if result.get("show_resource_builder"):
+                resource_buttons = [
+                    ConfirmationButton(
+                        id="add_developer",
+                        label="+ Developer",
+                        value="Senior Developer: 1 person, Full-time",
+                        style="primary"
+                    ),
+                    ConfirmationButton(
+                        id="add_tester",
+                        label="+ Tester", 
+                        value="QA Engineer: 1 person, Full-time",
+                        style="primary"
+                    ),
+                    ConfirmationButton(
+                        id="add_pm",
+                        label="+ Project Manager",
+                        value="Project Manager: 1 person, Full-time", 
+                        style="secondary"
+                    )
+                ]
+                confirmation_buttons = resource_buttons + base_buttons
+            
+            return ChatResponse(
+                session_id=session.session_id,
+                response=result.get("message", "Processing your SOW information..."),
+                action_type="sow_update" if result.get("success") else "sow_error",
+                action_data={
+                    "next_step": result.get("stage"),
+                    "stage_progress": result.get("stage_progress"),
+                    "question_type": result.get("question_type")
+                },
+                confirmation_buttons=confirmation_buttons,
+                download_url=f"/api/sow/documents/{session.session_id}/{result['download_path']}" if result.get("download_path") else None
+            )
+            
+        except Exception as e:
+            logger.error(f"Error in SOW conversation flow: {e}")
+            return ChatResponse(
+                session_id=session.session_id,
+                response=f"Error processing SOW input: {str(e)}. Please try again or exit SOW mode.",
+                action_type="sow_error",
+                confirmation_buttons=[
+                    ConfirmationButton(
+                        id="sow_exit",
+                        label="Exit SOW Mode",
+                        value="exit sow",
+                        style="secondary"
+                    )
+                ]
+            )
+    
+    # Handle SOW document generation button
+    if user_message.lower() == "generate" and session.active_domain == "sow":
+        session.add_message("user", user_message)
+        result = intelligent_sow_adapter.finalize(session)
+        
+        return ChatResponse(
+            session_id=session.session_id,
+            response=result.get("message", "Document generation processed."),
+            action_type="sow_finalize" if result.get("success") else "sow_error",
+            download_url=f"/api/sow/documents/{session.session_id}/{result['download_path']}" if result.get("download_path") else None,
+            confirmation_buttons=[
+                ConfirmationButton(
+                    id="sow_exit",
+                    label="Exit SOW Mode",
+                    value="exit sow",
+                    style="secondary"
+                )
+            ] if result.get("success") else None
+        )
+    
+    # Handle contact selection (format: "client:Company Name,contractor:Company Name")
+    if session.active_domain == "sow" and "client:" in user_message.lower() and "contractor:" in user_message.lower():
+        session.add_message("user", user_message)
+        
+        # Parse contact selection
+        parts = user_message.split(",")
+        client = ""
+        contractor = ""
+        
+        for part in parts:
+            if "client:" in part.lower():
+                client = part.split(":", 1)[1].strip()
+            elif "contractor:" in part.lower():
+                contractor = part.split(":", 1)[1].strip()
+        
+        result = await intelligent_sow_adapter.process_user_input(session, f"Client: {client}, Contractor: {contractor}")
+        
+        return ChatResponse(
+            session_id=session.session_id,
+            response=result.get("message", "Document generation processed."),
+            action_type="sow_finalize" if result.get("success") else "sow_error",
+            download_url=f"/api/sow/documents/{session.session_id}/{result['download_path']}" if result.get("download_path") else None,
+            confirmation_buttons=[
+                ConfirmationButton(
+                    id="sow_exit",
+                    label="Exit SOW Mode",
+                    value="exit sow",
+                    style="secondary"
+                )
+            ] if result.get("success") else None
+        )
+    
+    # Handle exit SOW mode
+    if user_message.lower() in ["exit sow", "exit sow mode"] and session.active_domain == "sow":
+        session.add_message("user", user_message)
+        session.active_domain = None
+        
+        return ChatResponse(
+            session_id=session.session_id,
+            response="✅ **Exited SOW mode successfully!**\n\nI'm back to helping you with both absence management and SOW generation. What would you like to do next?",
+            action_type="sow_exit",
+            confirmation_buttons=[
+                ConfirmationButton(
+                    id="absence_help",
+                    label="Absence Management",
+                    value="Who is absent today?",
+                    style="primary"
+                ),
+                ConfirmationButton(
+                    id="new_sow",
+                    label="New SOW",
+                    value="Create a SOW",
+                    style="primary"
+                )
+            ]
+        )
+
     session.add_message("user", user_message)
+
+    # Early intent detection for better user experience
+    user_lower = user_message.lower().strip()
+    
+    # Handle general/ambiguous queries before going to Gemini
+    general_queries = [
+        "what would you like to do today", "what can you do", "help", "hello", "hi",
+        "what are your capabilities", "what do you help with", "options", "menu"
+    ]
+    
+    mixed_intents = ["absence and sow", "sow and absence", "both", "everything"]
+    
+    # Check if user is asking for SOW but we're in absence mode or vice versa
+    sow_keywords = ["sow", "statement of work", "document generation", "create document", "generate document"]
+    absence_keywords = ["absent", "absence", "vacation", "leave", "present", "attendance"]
+    
+    is_sow_request = any(keyword in user_lower for keyword in sow_keywords)
+    is_absence_request = any(keyword in user_lower for keyword in absence_keywords)
+    
+    # If in wrong mode, provide guidance to switch
+    if session.active_domain == "absence" and is_sow_request and not is_absence_request:
+        return ChatResponse(
+            session_id=session.session_id,
+            response="""*I'm currently in Absence Management mode.*
+
+**To create a SOW document, I need to switch to SOW mode first.**
+
+Would you like me to switch to SOW generation mode?""",
+            action_type="mode_switch_needed",
+            confirmation_buttons=[
+                ConfirmationButton(
+                    id="switch_to_sow",
+                    label="Switch to SOW Mode",
+                    value="Create a SOW",
+                    style="primary"
+                ),
+                ConfirmationButton(
+                    id="stay_absence",
+                    label="Stay in Absence Mode",
+                    value="Who is absent today?",
+                    style="secondary"
+                )
+            ]
+        )
+    
+    if session.active_domain == "sow" and is_absence_request and not is_sow_request:
+        return ChatResponse(
+            session_id=session.session_id,
+            response="""*I'm currently in SOW Generation mode and focused exclusively on creating your Statement of Work.*
+
+**To handle absence queries, please exit SOW mode first.**""",
+            action_type="sow_mode_redirect",
+            confirmation_buttons=[
+                ConfirmationButton(
+                    id="exit_sow",
+                    label="Exit SOW Mode",
+                    value="exit sow",
+                    style="primary"
+                ),
+                ConfirmationButton(
+                    id="continue_sow",
+                    label="Continue SOW",
+                    value="continue with SOW",
+                    style="secondary"
+                )
+            ]
+        )
+    
+    # Handle single word "sow" which is ambiguous
+    if user_lower == "sow":
+        return ChatResponse(
+            session_id=session.session_id,
+            response="""*The request "sow" is ambiguous. It could refer to starting a new Statement of Work or something else entirely.*
+
+**I can help with both absence tracking and SOW generation. Which would you like to start with?**
+
+**You can try:**
+• Start SOW
+• Check absence""",
+            action_type="disambiguation_needed",
+            confirmation_buttons=[
+                ConfirmationButton(
+                    id="absence_help",
+                    label="Absence Management",
+                    value="Who is absent today?",
+                    style="primary"
+                ),
+                ConfirmationButton(
+                    id="sow_help",
+                    label="Create SOW", 
+                    value="Create a SOW",
+                    style="primary"
+                )
+            ]
+        )
+    
+    if any(query in user_lower for query in general_queries):
+        return ChatResponse(
+            session_id=session.session_id,
+            response="""*I'm here to help you with your daily operations!*
+
+**I specialize in two main areas:**
+
+🏢 **Absence Management**
+- Check who's absent today
+- Mark employees as absent, present, or on vacation
+- View absence reports and history
+- Track vacation days
+
+📄 **SOW Generation** 
+- Create professional Statement of Work documents
+- Guided conversation to collect all requirements
+- Generate downloadable documents
+
+**What would you like to work on?**""",
+            action_type="guidance_provided",
+            confirmation_buttons=[
+                ConfirmationButton(
+                    id="absence_help",
+                    label="Absence Management",
+                    value="Who is absent today?",
+                    style="primary"
+                ),
+                ConfirmationButton(
+                    id="sow_help", 
+                    label="Create SOW",
+                    value="Create a SOW",
+                    style="primary"
+                )
+            ]
+        )
+    
+    if any(mixed in user_lower for mixed in mixed_intents):
+        return ChatResponse(
+            session_id=session.session_id,
+            response="""*I can help with both absence management and SOW generation!*
+
+**Which would you like to focus on first?**
+
+I'll guide you through whichever option you choose, and you can always switch to the other later.""",
+            action_type="disambiguation_needed",
+            confirmation_buttons=[
+                ConfirmationButton(
+                    id="absence_first",
+                    label="Start with Absence Management",
+                    value="Who is absent today?",
+                    style="primary"
+                ),
+                ConfirmationButton(
+                    id="sow_first",
+                    label="Start with SOW Generation", 
+                    value="Create a SOW",
+                    style="primary"
+                )
+            ]
+        )
 
     # Check for SOW initiation request
     sow_keywords = ["sow", "statement of work", "document generation", "create document", "generate document"]
-    if any(keyword in user_message.lower() for keyword in sow_keywords) and not session.sow_state:
-        # Suggest SOW initiation
+    if any(keyword in user_message.lower() for keyword in sow_keywords) and not hasattr(session, 'sow_session_id'):
+        # Suggest SOW initiation with mode change warning
         return ChatResponse(
             session_id=session.session_id,
-            response="I can help you create a professional Statement of Work document! Shall we start the SOW generation process?",
+            response="""🔴 **SOW Generation Mode**
+
+I can help you create a professional Statement of Work document! 
+
+*Once we start, I'll focus exclusively on SOW generation until you exit or complete the document.*
+
+**Ready to begin?**""",
             action_type="sow_initiation_suggested",
             confirmation_buttons=[
                 ConfirmationButton(
                     id="sow_start",
-                    label="Generate SOW",
+                    label="Start SOW Generation",
                     value="Start SOW generation",
                     style="primary"
                 ),
@@ -187,20 +574,25 @@ async def chat_endpoint(
     except Exception as exc:  # noqa: BLE001
         logger.warning("Could not fetch employee list: %s", exc)
 
-    try:
-        raw_response = gemini_client.generate(session, user_message, context=context)
-        parsed = gemini_client.parse_response(raw_response)
-        tool_calls = parsed.get("tool_calls", [])
-    except Exception as exc:  # noqa: BLE001
-        logger.warning(
-            "Gemini processing failed: %s",
-            exc,
-            exc_info=True,
-        )
-        # Return error message instead of fallback
-        return ChatResponse(
-            session_id=session.session_id,
-            response="I'm having trouble connecting to my AI brain right now. 🤖 Please try again in a moment!",
+    # Check for direct routing first (SOW, absence keywords)
+    direct_call = _maybe_route_without_llm(session, user_message)
+    if direct_call:
+        tool_calls = [direct_call]
+    else:
+        try:
+            raw_response = gemini_client.generate(session, user_message, context=context)
+            parsed = gemini_client.parse_response(raw_response)
+            tool_calls = parsed.get("tool_calls", [])
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "Gemini processing failed: %s",
+                exc,
+                exc_info=True,
+            )
+            # Return error message instead of fallback
+            return ChatResponse(
+                session_id=session.session_id,
+                response="I'm having trouble connecting to my AI brain right now. 🤖 Please try again in a moment!",
             intent="error",
             action_type="error",
         )
@@ -233,9 +625,34 @@ async def chat_endpoint(
         assistant_responses.append(parsed["text"])
         session.add_message("assistant", parsed["text"])
     else:
-        fallback_message = "I'm sorry, I can help only with absence management and SOW generation right now."
+        # Better fallback with helpful guidance
+        fallback_message = """*I'm not sure how to help with that specific request.*
+
+**I can assist you with:**
+
+🏢 **Absence Management** - Employee attendance and vacation tracking
+📄 **SOW Generation** - Creating Statement of Work documents
+
+**Could you try rephrasing your request, or let me know which area you'd like help with?**"""
+        
         assistant_responses.append(fallback_message)
         session.add_message("assistant", fallback_message)
+        
+        # Add helpful buttons
+        confirmation_buttons = [
+            ConfirmationButton(
+                id="absence_help",
+                label="Absence Management",
+                value="Who is absent today?",
+                style="primary"
+            ),
+            ConfirmationButton(
+                id="sow_help",
+                label="Create SOW", 
+                value="Create a SOW",
+                style="primary"
+            )
+        ]
 
     background_tasks.add_task(session_manager.cleanup_expired)
 
@@ -429,29 +846,111 @@ async def _execute_tool_call(
 
     if name == "start_sow_session":
         overview = args.get("projectOverview", "")
-        result = sow_adapter.start_session(session, overview)
+        result = intelligent_sow_adapter.start_session(session, overview)
+        
+        # Set SOW mode
+        session.active_domain = "sow"
+        
+        # Always include exit button for SOW responses
+        base_buttons = [
+            ConfirmationButton(
+                id="sow_exit",
+                label="Exit SOW Mode",
+                value="exit sow",
+                style="secondary"
+            )
+        ]
+        
+        # Check if we need to show service selection buttons
+        if result.get("success") and result.get("next_step") == "services":
+            service_buttons = [
+                ConfirmationButton(
+                    id="service_standard",
+                    label="Standard Service Package",
+                    value="standard",
+                    style="primary"
+                ),
+                ConfirmationButton(
+                    id="service_custom", 
+                    label="Custom Services",
+                    value="custom",
+                    style="secondary"
+                )
+            ]
+            return {
+                "message": result.get("message", "Let's begin the SOW workflow."),
+                "action_type": "sow_start",
+                "action_data": {"next_step": result.get("next_step")},
+                "confirmation_buttons": service_buttons + base_buttons
+            }
+        
         return {
             "message": result.get("message", "Let's begin the SOW workflow."),
             "action_type": "sow_start" if result.get("success") else "sow_error",
             "action_data": {"next_step": result.get("next_step")},
+            "confirmation_buttons": base_buttons if result.get("success") else None
         }
 
     if name == "update_sow_section":
         section = args.get("section")
         content = args.get("content", "")
-        result = sow_adapter.update_section(session, section, content)
+        result = await intelligent_sow_adapter.process_user_input(session, content)
+        
         payload: Dict[str, Any] = {"next_step": result.get("next_step")}
         if result.get("download_path"):
             payload["download_path"] = result.get("download_path")
+        
+        # Always include exit button
+        base_buttons = [
+            ConfirmationButton(
+                id="sow_exit",
+                label="Exit SOW Mode",
+                value="exit sow",
+                style="secondary"
+            )
+        ]
+        
+        # Check if we need to show service selection buttons
+        confirmation_buttons = base_buttons
+        if result.get("show_service_buttons"):
+            service_buttons = [
+                ConfirmationButton(
+                    id="service_standard",
+                    label="Standard Service Package",
+                    value="standard",
+                    style="primary"
+                ),
+                ConfirmationButton(
+                    id="service_custom",
+                    label="Custom Services", 
+                    value="custom",
+                    style="secondary"
+                )
+            ]
+            confirmation_buttons = service_buttons + base_buttons
+        
+        # Check if we can generate document
+        if result.get("can_generate"):
+            generate_buttons = [
+                ConfirmationButton(
+                    id="generate_sow",
+                    label="Generate SOW Document",
+                    value="generate",
+                    style="primary"
+                )
+            ]
+            confirmation_buttons = generate_buttons + base_buttons
+        
         return {
             "message": result.get("message", "Section updated."),
             "action_type": "sow_update" if result.get("success") else "sow_error",
             "action_data": payload,
             "download_path": result.get("download_path"),
+            "confirmation_buttons": confirmation_buttons,
         }
 
     if name == "finalize_sow":
-        result = sow_adapter.finalize(session)
+        result = intelligent_sow_adapter.finalize(session)
         payload: Dict[str, Any] = {}
         if result.get("download_path"):
             payload["download_path"] = result.get("download_path")
@@ -460,6 +959,49 @@ async def _execute_tool_call(
             "action_type": "sow_finalize" if result.get("success") else "sow_error",
             "action_data": payload,
             "download_path": result.get("download_path"),
+        }
+
+    if name == "provide_guidance":
+        guidance_type = args.get("guidance_type", "help")
+        explanation = args.get("explanation", "")
+        main_response = args.get("main_response", "")
+        suggested_actions = args.get("suggested_actions", [])
+        
+        # Format the response with styling
+        formatted_response = ""
+        if explanation:
+            formatted_response += f"*{explanation}*\n\n"
+        
+        formatted_response += main_response
+        
+        if suggested_actions:
+            formatted_response += "\n\n**You can try:**\n"
+            for action in suggested_actions:
+                formatted_response += f"• {action}\n"
+        
+        # Add quick action buttons based on guidance type
+        confirmation_buttons = None
+        if guidance_type in ["capabilities", "help", "disambiguation"]:
+            confirmation_buttons = [
+                ConfirmationButton(
+                    id="absence_help",
+                    label="Absence Management",
+                    value="Who is absent today?",
+                    style="primary"
+                ),
+                ConfirmationButton(
+                    id="sow_help",
+                    label="Create SOW",
+                    value="Create a SOW",
+                    style="primary"
+                )
+            ]
+        
+        return {
+            "message": formatted_response,
+            "action_type": "guidance_provided",
+            "action_data": {"guidance_type": guidance_type},
+            "confirmation_buttons": confirmation_buttons
         }
 
     logger.warning("Received unsupported tool call: %s", name)

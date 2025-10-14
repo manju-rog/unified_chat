@@ -41,6 +41,7 @@ class SessionState:
     last_activity: datetime = field(default_factory=datetime.utcnow)
     active_domain: Optional[str] = None
     sow_state: Optional[SOWSessionState] = None
+    sow_session_id: Optional[str] = None  # Reference to new SOW session
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def add_message(self, role: Role, content: str, metadata: Optional[Dict[str, Any]] = None) -> None:
