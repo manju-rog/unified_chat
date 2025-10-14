@@ -31,29 +31,47 @@ class GeminiClient:
 
 
     def generate(self, session: SessionState, user_message: str, context: Optional[str] = None) -> Dict[str, Any]:
-        """Generate a response from Gemini including potential tool calls."""
+        """Generate a response from Gemini with intelligent intent detection and reasoning."""
 
         history = session.recent_history(self._settings.session_history_limit)
         messages: List[Dict[str, Any]] = []
         if history:
             messages.extend(history)
         
-        # Add context if provided (e.g., employee list, current mode)
+        # Enhanced context with intelligent mode detection
         context_parts = []
         if context:
             context_parts.append(context)
         
-        # Add current mode context
+        # Smart mode context with reasoning
         current_mode = "Unified Mode"
+        mode_context = ""
         if hasattr(session, 'active_domain') and session.active_domain:
             if session.active_domain == "sow":
-                current_mode = "SOW Generation Mode - Focus exclusively on SOW-related queries"
+                current_mode = "SOW Generation Mode"
+                mode_context = """
+CURRENT MODE: SOW Generation (Red Theme)
+- You are currently helping with Statement of Work creation
+- Focus on SOW-related queries unless user explicitly switches
+- If user asks about absence/attendance, acknowledge but suggest switching modes
+"""
             elif session.active_domain == "absence":
-                current_mode = "Absence Management Mode - Focus on absence-related queries"
+                current_mode = "Absence Management Mode"
+                mode_context = """
+CURRENT MODE: Absence Management (Blue Theme)  
+- You are currently helping with absence/attendance management
+- Focus on absence-related queries unless user explicitly switches
+- If user asks about SOW, acknowledge but suggest switching modes
+"""
         else:
-            current_mode = "Unified Mode - Can help with both absence and SOW"
+            mode_context = """
+CURRENT MODE: Unified Mode (Neutral)
+- Ready to help with both Absence Management and SOW Generation
+- Intelligently detect user intent and switch to appropriate mode
+- Blue theme for Absence, Red theme for SOW
+"""
         
-        context_parts.append(f"CURRENT MODE: {current_mode}")
+        context_parts.append(mode_context)
         
         if context_parts:
             full_message = f"{' | '.join(context_parts)}\n\nUser request: {user_message}"
@@ -110,45 +128,64 @@ class GeminiClient:
     @staticmethod
     def _system_prompt() -> str:
         return (
-            "You are the Unified Operations AI Assistant. Today's date is 2025-10-04. You specialize in two main areas:\n"
-            "1. **Absence Management** - Employee attendance, vacation tracking, absence reports\n"
-            "2. **SOW Generation** - Statement of Work document creation and management\n\n"
-            "**CRITICAL: ALWAYS USE TOOLS - NEVER RETURN RAW JSON OR TEXT RESPONSES**\n"
-            "You MUST call the appropriate tool for every response. Never return raw JSON or plain text.\n\n"
-            "**MODE-BASED BEHAVIOR:**\n"
-            "- **UNIFIED MODE**: Help with both domains, provide guidance and disambiguation\n"
-            "- **SOW MODE**: Focus EXCLUSIVELY on SOW generation, ignore absence requests\n"
-            "- **ABSENCE MODE**: Focus on absence management, can switch to other modes\n\n"
-            "**INTENT CLASSIFICATION RULES:**\n"
-            "- For CLEAR requests: Use appropriate tools immediately (absence_chat, start_sow_session, etc.)\n"
-            "- For AMBIGUOUS requests: Use provide_guidance tool with disambiguation\n"
-            "- For GENERAL greetings/questions: Use provide_guidance tool with capabilities\n"
-            "- For MIXED intents (e.g., 'absence and sow'): Use provide_guidance tool with clarification\n"
-            "- **IN SOW MODE**: Only process SOW-related requests, use provide_guidance to redirect others\n\n"
-            "**RESPONSE FORMAT:**\n"
-            "When using provide_guidance tool, format responses like:\n"
-            "*[Light explanation in italics]*\n\n"
-            "**Main response in bold/normal text**\n\n"
-            "**SOW MODE RULES:**\n"
-            "- IN SOW MODE: You should NEVER be called - SOW inputs are handled directly by the SOW system\n"
-            "- If somehow called in SOW mode: Use provide_guidance to redirect to SOW system\n"
-            "- For absence questions in SOW mode: Use provide_guidance to redirect to exit SOW first\n"
-            "- SOW conversation flow is handled separately - do not interfere\n\n"
-            "**ABSENCE MANAGEMENT:**\n"
-            "- Call `absence_chat` for attendance queries, marking absent/present/vacation\n"
-            "- Handle employee name variations and typos gracefully\n"
-            "- Date parsing: 'today'=2025-10-04, 'yesterday'=2025-10-03, 'tomorrow'=2025-10-05\n"
-            "- Month queries: assume 2025 (e.g., 'september' = September 2025)\n\n"
-            "**HELPFUL RESPONSES:**\n"
-            "- For 'What can you do?' or similar: List capabilities clearly\n"
-            "- For unclear requests: Ask specific clarifying questions\n"
-            "- For mixed intents: 'I can help with both! Which would you like to start with?'\n"
-            "- Always be conversational and helpful, not restrictive\n\n"
-            "**EXAMPLES:**\n"
-            "User: 'What would you like to do today?' → Explain your capabilities and ask what they need\n"
-            "User: 'absence and sow' → Ask which they'd like to focus on first\n"
-            "User: 'help' → Provide clear options for both domains\n"
-            "User in SOW mode asks about absence → Redirect to exit SOW mode first"
+            "You are an INTELLIGENT Unified Operations AI Assistant. Today's date is 2025-10-14. You have advanced reasoning capabilities.\n\n"
+            
+            "🎯 **CORE CAPABILITIES:**\n"
+            "1. **Absence Management** (Blue Theme 🔵): Employee attendance, vacation tracking, absence reports\n"
+            "2. **SOW Generation** (Red Theme 🔴): Statement of Work document creation\n\n"
+            
+            "🧠 **INTELLIGENT REASONING:**\n"
+            "- **Think First**: Always analyze user intent before responding\n"
+            "- **Show Reasoning**: Include brief reasoning in your responses\n"
+            "- **Context Aware**: Consider conversation history and current mode\n"
+            "- **Smart Dates**: Handle relative dates intelligently (this month = October 2025)\n"
+            "- **Edge Cases**: Handle ambiguous or complex requests gracefully\n\n"
+            
+            "📅 **SMART DATE HANDLING:**\n"
+            "- 'today' = 2025-10-14\n"
+            "- 'this month' = October 2025 (2025-10)\n"
+            "- 'last month' = September 2025 (2025-09)\n"
+            "- 'current month absences' = October 2025 absences\n"
+            "- Handle all date variations intelligently\n\n"
+            
+            "🎨 **RESPONSE FORMAT WITH REASONING:**\n"
+            "Always structure responses as:\n"
+            "1. *[Brief reasoning in light text]*\n"
+            "2. **Main response in normal text**\n"
+            "3. Include appropriate mode indicators\n\n"
+            
+            "🔄 **INTELLIGENT MODE SWITCHING:**\n"
+            "- **Unified Mode**: Ready for both domains\n"
+            "- **Absence Mode** (🔵): Focus on attendance, but can switch\n"
+            "- **SOW Mode** (🔴): SOW creation (handled separately)\n"
+            "- Detect intent changes mid-conversation\n"
+            "- Switch modes seamlessly when user intent changes\n\n"
+            
+            "⚡ **CRITICAL TOOL USAGE:**\n"
+            "- **absence_chat**: For ALL absence/attendance queries (with proper action, query_type, dates)\n"
+            "- **start_sow_session**: For SOW creation requests\n"
+            "- **provide_guidance**: For ambiguous requests or mode switching\n"
+            "- NEVER return raw text - ALWAYS use appropriate tools\n\n"
+            
+            "🎯 **ABSENCE MANAGEMENT INTELLIGENCE:**\n"
+            "- 'Who is absent today?' → absence_chat(action='query_absence', query_type='byDate', date='2025-10-14')\n"
+            "- 'Show this month absences' → absence_chat(action='query_absence', query_type='byMonth', month='2025-10')\n"
+            "- 'Mark John absent' → absence_chat(action='mark_absence', employee_name='John', status='A')\n"
+            "- Handle employee name variations and date parsing intelligently\n\n"
+            
+            "🚀 **EXAMPLES OF INTELLIGENT BEHAVIOR:**\n"
+            "User: 'Show this month's absences' → *Interpreting as October 2025 absences* → Call absence_chat with byMonth\n"
+            "User: 'Create SOW' → *Switching to SOW generation mode* → Call start_sow_session\n"
+            "User: 'Help' → *User needs guidance on capabilities* → Call provide_guidance with options\n"
+            "User in SOW asks about absence → *User wants to switch modes* → Provide guidance to exit SOW first\n\n"
+            
+            "🎨 **VISUAL INDICATORS:**\n"
+            "- Use 🔵 for Absence-related responses\n"
+            "- Use 🔴 for SOW-related responses\n"
+            "- Use ⚡ for mode switching\n"
+            "- Show reasoning in *italics* before main response\n\n"
+            
+            "Be intelligent, adaptive, and always provide maximum value to the user."
         )
 
     @staticmethod
@@ -159,8 +196,9 @@ class GeminiClient:
                     {
                         "name": "absence_chat",
                         "description": (
-                            "Handle absence management queries. Use for ANY question or command about attendance, absences, vacations, employee availability, or absence reports. "
-                            "You must parse the user's request and extract: employee name (if mentioned), date/date range, and action type (mark absent/present/vacation OR query absences)."
+                            "🔵 INTELLIGENT Absence Management Tool. Use for ALL attendance, absence, vacation queries and commands. "
+                            "SMART DATE PARSING: Handle 'today', 'this month', 'current month', 'last month', relative dates intelligently. "
+                            "Today is 2025-10-14, current month is October 2025 (2025-10)."
                         ),
                         "parameters": {
                             "type": "object",
@@ -168,11 +206,16 @@ class GeminiClient:
                                 "action": {
                                     "type": "string",
                                     "enum": ["mark_absence", "query_absence"],
-                                    "description": "Whether to mark someone absent/present/vacation OR query absence records",
+                                    "description": "mark_absence: Mark employee status | query_absence: Get absence reports/data",
+                                },
+                                "query_type": {
+                                    "type": "string",
+                                    "enum": ["byDate", "byDateRange", "byMonth"],
+                                    "description": "For query_absence: byDate=single day, byDateRange=date range, byMonth=full month",
                                 },
                                 "employee_name": {
                                     "type": "string",
-                                    "description": "Employee name (required for mark_absence, optional for query_absence to filter by person)",
+                                    "description": "Employee name (required for mark_absence, optional for query_absence)",
                                 },
                                 "status": {
                                     "type": "string",
@@ -181,15 +224,16 @@ class GeminiClient:
                                 },
                                 "date": {
                                     "type": "string",
-                                    "description": "Single date in YYYY-MM-DD format, or 'today', 'yesterday', 'tomorrow'",
+                                    "description": "Single date YYYY-MM-DD (for byDate queries or mark_absence). Use 2025-10-14 for 'today'",
                                 },
-                                "date_range": {
-                                    "type": "object",
-                                    "properties": {
-                                        "start": {"type": "string", "description": "Start date YYYY-MM-DD"},
-                                        "end": {"type": "string", "description": "End date YYYY-MM-DD"}
-                                    },
-                                    "description": "Date range for queries (e.g., 'this week', 'september', 'last month')",
+                                "dates": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                    "description": "Array of dates YYYY-MM-DD for mark_absence or byDateRange [start, end]",
+                                },
+                                "month": {
+                                    "type": "string",
+                                    "description": "Month in YYYY-MM format for byMonth queries. Use 2025-10 for 'this month/current month'",
                                 },
                                 "reason": {
                                     "type": "string",
