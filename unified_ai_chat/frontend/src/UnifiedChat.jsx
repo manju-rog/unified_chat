@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './UnifiedChat.css';
+import SowControls from './components/SowControls';
 
 // Simple markdown formatter for message content
 const formatMessageContent = (content) => {
@@ -25,11 +26,12 @@ const UnifiedChat = () => {
   const [sessionId, setSessionId] = useState(null);
   const [error, setError] = useState(null);
   const [currentMode, setCurrentMode] = useState('unified'); // 'unified', 'sow', 'absence'
+  const sessionIdRef = useRef(null);
   
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8001/api';
   
   // Auto-scroll to bottom
   const scrollToBottom = useCallback(() => {
@@ -83,7 +85,8 @@ What would you like to do today?`,
         },
         body: JSON.stringify({
           message: message,
-          session_id: sessionId
+          mode: currentMode,
+          session_id: sessionId || sessionIdRef.current
         })
       });
       
@@ -98,8 +101,16 @@ What would you like to do today?`,
         : null;
       
       // Update session ID
-      if (data.session_id && !sessionId) {
-        setSessionId(data.session_id);
+      if (data.session_id) {
+        if (!sessionId) {
+          setSessionId(data.session_id);
+        }
+        sessionIdRef.current = data.session_id;
+      }
+      
+      // Handle mode reset
+      if (data.metadata?.resetToUnified) {
+        setCurrentMode('unified');
       }
       
       // Add assistant response
@@ -162,7 +173,91 @@ What would you like to do today?`,
     } finally {
       setIsLoading(false);
     }
-  }, [inputValue, isLoading, sessionId, API_BASE_URL]);
+  }, [inputValue, isLoading, sessionId, API_BASE_URL, currentMode]);
+  
+  // Send chat message function for SOW controls
+  const sendChatMessage = useCallback(async (message) => {
+    const payload = {
+      message,
+      mode: currentMode,
+      session_id: sessionId || sessionIdRef.current
+    };
+    
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API_BASE_URL}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      const data = await response.json();
+      
+      if (data?.metadata?.resetToUnified) {
+        setCurrentMode('unified');
+      }
+      
+      // Update session ID
+      if (data.session_id) {
+        if (!sessionId) {
+          setSessionId(data.session_id);
+        }
+        sessionIdRef.current = data.session_id;
+      }
+      
+      // Handle silent updates (for resource +/- clicks)
+      if (data.action_type === 'sow_silent_update') {
+        // Update the last assistant message with new action data
+        setMessages(prev => {
+          const newMessages = [...prev];
+          const lastAssistantIndex = newMessages.map(m => m.role).lastIndexOf('assistant');
+          if (lastAssistantIndex !== -1) {
+            newMessages[lastAssistantIndex] = {
+              ...newMessages[lastAssistantIndex],
+              metadata: {
+                ...newMessages[lastAssistantIndex].metadata,
+                actionData: data.action_data
+              }
+            };
+          }
+          return newMessages;
+        });
+        return; // Don't add new messages for silent updates
+      }
+      
+      // Add user message
+      const userMessage = {
+        id: Date.now(),
+        role: 'user',
+        content: message,
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, userMessage]);
+      
+      // Add assistant response
+      const assistantMessage = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: data.response,
+        timestamp: new Date().toISOString(),
+        metadata: {
+          intent: data.intent,
+          actionType: data.action_type,
+          actionData: data.action_data,
+          downloadUrl: data.download_url,
+          disambiguationOptions: data.disambiguation_options,
+          confirmationButtons: data.confirmation_buttons
+        }
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+      
+    } catch (err) {
+      console.error('Chat error:', err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentMode, sessionId, API_BASE_URL]);
   
   // Handle Enter key
   const handleKeyDown = useCallback((e) => {
@@ -270,6 +365,8 @@ What would you like to do today?`,
     // Check for mode changes
     if (buttonValue === "Start SOW generation" || buttonValue === "Create a SOW") {
       setCurrentMode('sow');
+      sendChatMessage("/start");
+      return;
     } else if (buttonValue.includes("absent") || buttonValue.includes("Who is absent")) {
       setCurrentMode('absence');
     } else if (buttonValue === "exit sow" || buttonValue === "Exit SOW Mode") {
@@ -575,14 +672,20 @@ What would you like to do today?`,
             </div>
           )}
           
-          {/* SOW Initiation Button - Removed as confirmation buttons handle this */}
+          {/* SOW Controls */}
+          {currentMode === 'sow' && message.role === 'assistant' && message.metadata?.actionData && (
+            <SowControls 
+              hint={message.metadata.actionData} 
+              onClick={(val) => sendChatMessage(val)} 
+            />
+          )}
           
           {/* Exit SOW Button - Only visible for assistant messages in SOW mode */}
           {currentMode === 'sow' && message.role === 'assistant' && (
             <div className="sow-exit-buttons">
               <button
                 className="sow-exit-button"
-                onClick={handleExitSOW}
+                onClick={() => sendChatMessage("exit_sow")}
                 disabled={isLoading}
               >
                 <span className="material-icons">exit_to_app</span>

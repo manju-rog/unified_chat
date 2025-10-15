@@ -1,54 +1,37 @@
 {
-    "clients": {
-        "WareMax Distribution": {
-            "name": "Maria Garcia",
-            "company": "WareMax Distribution",
-            "address": "890 Industrial Parkway, Chicago IL 60601",
-            "phone": "+1-312-555-0423",
-            "email": "maria.garcia@waremax.com",
-            "role": "Supply Chain Director"
-        },
-        "SecureBank Financial Group": {
-            "name": "Emily Thompson",
-            "company": "SecureBank Financial Group",
-            "address": "8800 Banking Plaza Suite 2000, Charlotte NC 28202",
-            "phone": "+1-704-555-0891",
-            "email": "emily.thompson@securebank.com",
-            "role": "Head of Digital Banking"
-        },
-        "MUFG Bank, Ltd": {
-            "name": "Joshua Morgan",
-            "company": "MUFG Bank, Ltd",
-            "address": "MUFG Bank, Ltd. 25 Ropemaker Street, London, EC2Y 9AN",
-            "phone": "+44 20 7577 5162",
-            "email": "accountspayable.invoices@uk.mufg.jp",
-            "role": "Head of Accounts"
-        }
+  "contacts": [
+    {
+      "id": "mufg_bank",
+      "name": "MUFG Bank",
+      "type": "client",
+      "email": "corporate@mufg.com",
+      "phone": "+81-3-3240-1111",
+      "address": "2-7-1 Marunouchi, Chiyoda-ku, Tokyo 100-8388, Japan",
+      "contact_person": "Hiroshi Tanaka",
+      "designation": "Senior Vice President",
+      "department": "Corporate Banking Division"
     },
-    "contractors": {
-        "LogiTech Solutions": {
-            "name": "James Wilson",
-            "company": "LogiTech Solutions",
-            "address": "450 Commerce Street, Denver CO 80202",
-            "phone": "+1-303-555-0156",
-            "email": "james.wilson@logitech-sol.com",
-            "role": "Operations Manager"
-        },
-        "MobileFirst Technologies Ltd": {
-            "name": "David Kim",
-            "company": "MobileFirst Technologies Ltd",
-            "address": "1500 Tech Park Drive Building C, Cambridge MA 02142",
-            "phone": "+1-617-555-0342",
-            "email": "david.kim@mobilefirst.tech",
-            "role": "Chief Delivery Officer"
-        },
-        "Oracle Financial Services Software": {
-            "name": "Yogesh Kamat",
-            "company": "Oracle Financial Services Software",
-            "address": "a company registered in the Netherlands under company number 34134447, whose registered office is at Barbara Strozzilaan 201, 1083HN Amsterdam, the Netherlands, acting through its United Kingdom branch, whose registered office is at The Helicon, 1 South Place, London, EC2M 2RB; branch registration number BR005854",
-            "phone": "+44 20 7531 4404",
-            "email": "yogesh.kamat@oracle.com",
-            "role": "Chief Delivery Officer"
-        }
+    {
+      "id": "tech_solutions",
+      "name": "TechSolutions Inc",
+      "type": "contractor", 
+      "email": "projects@techsolutions.com",
+      "phone": "+1-555-0123",
+      "address": "123 Tech Street, Silicon Valley, CA 94000",
+      "contact_person": "Sarah Johnson",
+      "designation": "Project Director",
+      "department": "Enterprise Solutions"
+    },
+    {
+      "id": "global_systems",
+      "name": "Global Systems Ltd",
+      "type": "contractor",
+      "email": "business@globalsystems.com", 
+      "phone": "+44-20-7123-4567",
+      "address": "45 London Bridge Street, London SE1 9RY, UK",
+      "contact_person": "James Wilson",
+      "designation": "Managing Director",
+      "department": "Financial Services"
     }
+  ]
 }
