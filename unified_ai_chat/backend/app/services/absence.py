@@ -48,11 +48,17 @@ class AbsenceAdapter:
                 "status": status,
                 "reason": reason or "",
             }
+            
+            self._logger.info(f"Marking absence - Payload: {payload}")
             response = await client.post("/ai/mark-absence", json=payload)
+            self._logger.info(f"Mark absence response - Status: {response.status_code}, Body: {response.text}")
+            
             if response.status_code >= 400:
+                error_detail = response.text if response.text else "Unknown error"
+                self._logger.error(f"Absence service error: {error_detail}")
                 return {
                     "success": False,
-                    "message": "Absence service returned an error while updating attendance.",
+                    "message": f"Absence service returned an error: {error_detail}",
                 }
             body = response.json()
             return {
@@ -100,7 +106,20 @@ class AbsenceAdapter:
                         "success": False,
                         "message": "Please provide a month in YYYY-MM format.",
                     }
-                start = date.fromisoformat(f"{month}-01")
+                # Handle month name or YYYY-MM format
+                if "-" in month:
+                    start = date.fromisoformat(f"{month}-01")
+                else:
+                    # Month name provided, need to convert
+                    month_map = {
+                        'january': 1, 'february': 2, 'march': 3, 'april': 4,
+                        'may': 5, 'june': 6, 'july': 7, 'august': 8,
+                        'september': 9, 'october': 10, 'november': 11, 'december': 12
+                    }
+                    month_num = month_map.get(month.lower(), datetime.now().month)
+                    year = datetime.now().year
+                    start = date(year, month_num, 1)
+                
                 if start.month == 12:
                     next_month = start.replace(year=start.year + 1, month=1, day=1)
                 else:
@@ -198,9 +217,12 @@ class AbsenceAdapter:
     async def _fetch_day_details(
         self, client: httpx.AsyncClient, date_value: str
     ) -> Dict[str, Any]:
+        self._logger.info(f"Fetching day details for date: {date_value}")
         response = await client.get("/absences/calendar/day-details", params={"date": date_value})
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        self._logger.info(f"Day details response: {data}")
+        return data
 
     def _normalize_date_value(self, value: str) -> str:
         """Convert human-friendly date tokens to ISO strings."""

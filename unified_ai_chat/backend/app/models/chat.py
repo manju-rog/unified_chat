@@ -75,11 +75,12 @@ class DisambiguationOption(BaseModel):
 
 
 class ConfirmationButton(BaseModel):
-    """Represents a Yes/No confirmation button."""
+    """Represents a confirmation button that can either submit or populate input."""
     
     id: str
     label: str
-    value: str  # "yes" or "no"
+    value: Optional[str] = None  # For auto-submit behavior
+    populate_input: Optional[str] = None  # For input population behavior
     style: Optional[str] = "primary"  # "primary" or "secondary"
 
 
@@ -96,3 +97,4 @@ class ChatResponse(BaseModel):
     disambiguation_options: Optional[List[DisambiguationOption]] = None
     confirmation_buttons: Optional[List[ConfirmationButton]] = None
     requires_confirmation: bool = False
+    thinking: Optional[str] = None  # Gemini's reasoning/thinking process

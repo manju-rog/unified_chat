@@ -50,8 +50,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include REST API router ONLY
+# Include REST API routers
 app.include_router(endpoints.router, prefix="/api", tags=["SOW Generation"])
+
+# Include direct generation endpoint
+from app.api.direct_generation import router as direct_router
+app.include_router(direct_router, prefix="/api", tags=["Direct Generation"])
 
 
 # DO NOT include websocket.router - we register it directly below

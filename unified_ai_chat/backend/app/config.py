@@ -32,7 +32,7 @@ class Settings(BaseSettings):
         env="SOW_TEMPLATE_PATH",
     )
     sow_output_dir: Path = Field(
-        default_factory=lambda: Path(__file__).resolve().parent / ".." / "generated_docs",
+        default_factory=lambda: Path(__file__).resolve().parent / ".." / ".." / ".." / "generated_docs_sow",
         env="SOW_OUTPUT_DIR",
     )
 

@@ -1,6 +1,11 @@
 """FastAPI entrypoint for the unified AI chat orchestrator - GEMINI FIRST APPROACH."""
 from __future__ import annotations
 
+# Load environment variables first
+from dotenv import load_dotenv
+load_dotenv()
+
+import asyncio
 import logging
 import re
 import uuid
@@ -27,12 +32,223 @@ logging.basicConfig(level=logging.INFO)
 
 # SOW globals
 SOW_SESSIONS: dict[str, SowState] = {}
-sow_adapter = SowAdapter(out_root=Path("output"))
+sow_adapter = SowAdapter(out_root=Path("generated_docs_sow"))
+
+# SOW generation locks to prevent double-fires
+_SOW_LOCKS: Dict[str, asyncio.Lock] = {}
+
+def _lock_for(session_id: str) -> asyncio.Lock:
+    """Get or create a lock for the given session"""
+    if session_id not in _SOW_LOCKS:
+        _SOW_LOCKS[session_id] = asyncio.Lock()
+    return _SOW_LOCKS[session_id]
 
 GENERIC_EMPLOYEE_TOKENS = {
-    "someone", "somebody", "anyone", "anybody", "employee", "staff", 
+    "someone", "somebody", "anyone", "anybody", "employee", "staff",
     "person", "people", "member", "team member", "them", "him", "her", "they",
 }
+
+EXIT_SOW_COMMANDS = {"exit sow", "exit", "quit", "cancel", "stop sow", "exit_sow"}
+
+
+def _prompt_sow_confirmation(session: SessionState, project_overview: str) -> ChatResponse:
+    session.metadata["pending_action"] = {
+        "type": "start_sow",
+        "data": {"project_overview": project_overview},
+    }
+    message = (
+        "Do you want me to start the Statement of Work generation flow now?\n\n"
+        "Once we begin, I'll switch to SOW mode (red theme) and collect the project details step by step."
+    )
+    confirmation_buttons = [
+        ConfirmationButton(
+            id="sow_confirm_yes",
+            label="Yes, start SOW generation",
+            value="yes start sow generation",
+            style="primary",
+        ),
+        ConfirmationButton(
+            id="sow_confirm_no",
+            label="No, keep chatting",
+            value="no",
+            style="secondary",
+        ),
+    ]
+    return ChatResponse(
+        session_id=session.session_id,
+        response=message,
+        action_type="confirmation_needed",
+        confirmation_buttons=confirmation_buttons,
+    )
+
+
+
+
+
+async def _start_sow_session(session: SessionState, project_overview: str | None = None) -> ChatResponse:
+    state = SowState()
+    
+    # Only use project_overview if it's meaningful (not empty, not just "yes", etc.)
+    meaningful_overview = False
+    if project_overview:
+        cleaned = project_overview.strip().lower()
+        # Check if it's not just a confirmation word
+        if cleaned and cleaned not in {"yes", "y", "yeah", "yep", "ok", "okay", "sure", "start", "begin"}:
+            state.data["project_info"] = project_overview.strip()
+            state.stage = "services"
+            meaningful_overview = True
+
+    SOW_SESSIONS[session.session_id] = state
+    session.metadata["active_sow"] = True
+
+    if meaningful_overview:
+        intro = (
+            "🚀 **SOW session started!**\n\n"
+            f"I captured your overview:\n> {project_overview}\n\n"
+            "Now let's continue with the SOW wizard."
+        )
+        next_prompt = "Please select the type of services for this SOW:"
+        hint = {
+            "message": "Choose the services package below.",
+            "confirmation_buttons": [
+                {"id": "sow_service_standard", "label": "📦 Standard Package", "populate_input": "standard", "style": "primary"},
+                {"id": "sow_service_custom", "label": "🛠️ Custom Services", "populate_input": "custom", "style": "secondary"},
+            ],
+        }
+        state.stage = "services"
+        response_text = f"{intro}\n\n{next_prompt}"
+    else:
+        # ALWAYS start with project info question
+        question, hint = sow_adapter.start()
+        response_text = question
+
+    # Convert buttons to use populate_input instead of value
+    confirmation_buttons = hint.get("confirmation_buttons", [])
+    if confirmation_buttons:
+        confirmation_buttons = [
+            ConfirmationButton(
+                id=btn["id"],
+                label=btn["label"],
+                populate_input=btn.get("populate_input", btn.get("value")),
+                style=btn.get("style", "primary"),
+            )
+            for btn in confirmation_buttons
+        ]
+    else:
+        confirmation_buttons = []
+
+    # Ensure theme is set to SOW mode
+    if not hint:
+        hint = {}
+    hint["theme"] = "sow"
+    
+    logger.info(f"Started SOW session for {session.session_id}, switching to SOW theme")
+    
+    return ChatResponse(
+        session_id=session.session_id,
+        response=response_text,
+        action_type="sow_started",
+        action_data=hint,
+        confirmation_buttons=confirmation_buttons,
+    )
+
+
+async def _exit_sow_session(session: SessionState, message: Optional[str] = None) -> ChatResponse:
+    # Clear ALL SOW-related state completely
+    SOW_SESSIONS.pop(session.session_id, None)
+    session.metadata.pop("active_sow", None)
+    session.metadata.pop("sow_active", None)
+    session.metadata.pop("pending_action", None)
+    session.metadata.pop("waiting_for_reason", None)
+    
+    logger.info(f"Exited SOW session for {session.session_id}, returning to normal mode")
+    
+    response_text = message or (
+        "✅ **Exited SOW mode.**\n\n"
+        "I'm back to the unified assistant. Ask me anything about absence management or start a new SOW anytime."
+    )
+    return ChatResponse(
+        session_id=session.session_id,
+        response=response_text,
+        action_type="sow_exit",
+        action_data={"theme": "normal"}  # Explicitly set theme back to normal
+    )
+
+
+async def _process_sow_message(session: SessionState, user_message: str) -> ChatResponse:
+    state = SOW_SESSIONS.get(session.session_id)
+    if state is None:
+        return await _exit_sow_session(session, "SOW session was not active. I'm back to the main assistant.")
+
+    # Quick-reply / text command → call the same function
+    cleaned = user_message.strip().lower().replace(" ", "_")
+    if cleaned == "generate_sow":
+        return await do_generate_sow(session, state.data)
+
+    state, hint = sow_adapter.process(state, user_message)
+    SOW_SESSIONS[session.session_id] = state
+
+    if hint.get("silent_update"):
+        # Include confirmation buttons in silent updates
+        confirmation_buttons = hint.get("confirmation_buttons", [])
+        combined_buttons: List[ConfirmationButton] = []
+
+        for btn in confirmation_buttons:
+            combined_buttons.append(
+                ConfirmationButton(
+                    id=btn["id"],
+                    label=btn["label"],
+                    populate_input=btn.get("populate_input"),
+                    style=btn.get("style", "primary"),
+                )
+            )
+        
+        # Ensure theme stays as SOW
+        if not hint:
+            hint = {}
+        hint["theme"] = "sow"
+        
+        return ChatResponse(
+            session_id=session.session_id,
+            response="",
+            action_type="sow_silent_update",
+            action_data=hint,
+            confirmation_buttons=combined_buttons,
+        )
+
+    confirmation_buttons = hint.get("confirmation_buttons", [])
+    combined_buttons: List[ConfirmationButton] = []
+
+    for btn in confirmation_buttons:
+        combined_buttons.append(
+            ConfirmationButton(
+                id=btn["id"],
+                label=btn["label"],
+                populate_input=btn.get("populate_input"),  # Use populate_input for new behavior
+                style=btn.get("style", "primary"),
+            )
+        )
+
+    # Ensure theme stays as SOW
+    if not hint:
+        hint = {}
+    hint["theme"] = "sow"
+
+    return ChatResponse(
+        session_id=session.session_id,
+        response=hint.get("message", "Let's keep building the SOW."),
+        action_type="sow_processing",
+        action_data=hint,
+        confirmation_buttons=combined_buttons,
+    )
+
+
+def _in_sow_session(session: SessionState) -> bool:
+    return session.metadata.get("active_sow", False) and session.session_id in SOW_SESSIONS
+
+
+
+
 
 app = FastAPI(title="Unified AI Chat Orchestrator", version="0.1.0")
 
@@ -70,7 +286,41 @@ async def chat_endpoint(
     
     user_message = request.message.strip()
     session.add_message("user", user_message)
-    
+    lowered = user_message.lower()
+
+    pending_action = session.metadata.get("pending_action")
+    if pending_action and pending_action.get("type") == "start_sow":
+        if lowered in {"yes", "yes start sow generation", "y", "start sow", "yes, start sow generation"}:
+            session.metadata.pop("pending_action", None)
+            return await _start_sow_session(
+                session, pending_action.get("data", {}).get("project_overview")
+            )
+        if lowered in {"no", "n", "nope", "not now"}:
+            session.metadata.pop("pending_action", None)
+            return ChatResponse(
+                session_id=session.session_id,
+                response="Okay, I won't start the SOW workflow right now. Let me know if you change your mind!",
+                action_type="confirmation_cancelled",
+            )
+
+    # Handle SOW exit command at any point - even if session is not active
+    # This handles the case where user says "exit sow" after generation completes
+    if lowered in EXIT_SOW_COMMANDS:
+        if _in_sow_session(session):
+            return await _exit_sow_session(session)
+        else:
+            # User said exit but not in SOW - acknowledge and continue
+            return ChatResponse(
+                session_id=session.session_id,
+                response="✅ You're already in normal mode. How can I help you with absence management or SOW generation?",
+                action_type="already_in_normal_mode",
+                action_data={"theme": "normal"}
+            )
+
+    # If we're actively in a SOW flow, keep the conversation there
+    if _in_sow_session(session):
+        return await _process_sow_message(session, user_message)
+
     # **GEMINI-FIRST APPROACH: Every message goes to Gemini with full context**
     context_parts = []
     
@@ -105,17 +355,24 @@ async def chat_endpoint(
     try:
         gemini_response = gemini_client.generate(session, user_message, full_context)
         parsed_response = gemini_client.parse_response(gemini_response)
+        thinking = parsed_response.get("thinking")
         
         # Handle Gemini's tool calls
         if parsed_response["tool_calls"]:
             tool_call = parsed_response["tool_calls"][0]
             
             if tool_call.name == "absence_chat":
-                return await _handle_gemini_absence_call(session, tool_call, user_message)
+                response = await _handle_gemini_absence_call(session, tool_call, user_message)
+                response.thinking = thinking
+                return response
             elif tool_call.name == "start_sow_session":
-                return await _handle_gemini_sow_call(session, tool_call)
+                response = await _handle_sow_confirmation(session, tool_call, user_message)
+                response.thinking = thinking
+                return response
             elif tool_call.name == "provide_guidance":
-                return _handle_gemini_guidance(session, tool_call)
+                response = _handle_gemini_guidance(session, tool_call)
+                response.thinking = thinking
+                return response
         
         # If Gemini provided text response
         if parsed_response["text"]:
@@ -123,7 +380,8 @@ async def chat_endpoint(
             return ChatResponse(
                 session_id=session.session_id,
                 response=parsed_response["text"],
-                action_type="gemini_text_response"
+                action_type="gemini_text_response",
+                thinking=thinking
             )
         
         # Gemini didn't return a tool call or text. Fall back to deterministic classifier
@@ -140,6 +398,26 @@ async def chat_endpoint(
         
     except Exception as e:
         logger.error(f"Gemini processing error: {e}")
+        
+        # Check if it's a quota/rate limit error
+        error_str = str(e).lower()
+        if "429" in error_str or "quota" in error_str or "resource exhausted" in error_str:
+            logger.warning("Gemini API quota exceeded, using fallback classifier")
+            # Try fallback classifier
+            try:
+                fallback = await _attempt_classifier_fallback(session, user_message)
+                if fallback:
+                    return fallback
+            except Exception as fallback_error:
+                logger.error(f"Fallback classifier also failed: {fallback_error}")
+            
+            return ChatResponse(
+                session_id=session.session_id,
+                response="⚠️ AI service is temporarily unavailable (quota exceeded). Please try again in a moment, or rephrase your request.",
+                action_type="quota_exceeded"
+            )
+        
+        # Generic error
         return ChatResponse(
             session_id=session.session_id,
             response="I'm having trouble processing your request. Could you please rephrase it?",
@@ -182,7 +460,8 @@ async def _handle_gemini_absence_call(session: SessionState, tool_call: ToolCall
                     f"**Available employees:** {', '.join(available_names[:5])}{'...' if len(available_names) > 5 else ''}\n\n"
                     f"{prompt_examples}"
                 ),
-                action_type="employee_name_needed"
+                action_type="employee_name_needed",
+                action_data={"theme": "absence"}
             )
         
         # Try to match employee name
@@ -199,7 +478,12 @@ async def _handle_gemini_absence_call(session: SessionState, tool_call: ToolCall
             response = f"I couldn't find '{employee_name}'."
             if suggestions:
                 response += f" Did you mean: {', '.join(suggestions[:3])}?"
-            return ChatResponse(session_id=session.session_id, response=response, action_type="employee_not_found")
+            return ChatResponse(
+                session_id=session.session_id, 
+                response=response, 
+                action_type="employee_not_found",
+                action_data={"theme": "absence"}
+            )
         
         if len(matches) > 1:
             options = [DisambiguationOption(id=f"emp_{emp['id']}", label=emp['name'], value=emp['name']) for emp in matches]
@@ -232,7 +516,8 @@ async def _handle_gemini_absence_call(session: SessionState, tool_call: ToolCall
                     f"Did you mean **{matched_employee['name']}**?"
                 ),
                 action_type="employee_name_clarification",
-                disambiguation_options=[option]
+                disambiguation_options=[option],
+                action_data={"theme": "absence"}
             )
 
         normalized_date = _normalize_date_str(date_str)
@@ -251,7 +536,8 @@ async def _handle_gemini_absence_call(session: SessionState, tool_call: ToolCall
                 confirmation_buttons=[
                     ConfirmationButton(id="reason_yes", label="Yes, add reason", value="yes", style="primary"),
                     ConfirmationButton(id="reason_no", label="No, skip", value="no", style="secondary")
-                ]
+                ],
+                action_data={"theme": "absence"}
             )
         
         # Execute the marking
@@ -266,7 +552,8 @@ async def _handle_gemini_absence_call(session: SessionState, tool_call: ToolCall
         return ChatResponse(
             session_id=session.session_id,
             response=result.get("message", "Absence marked successfully"),
-            action_type="absence_marked"
+            action_type="absence_marked",
+            action_data={"theme": "absence"}
         )
     
     elif action == "query_absence":
@@ -274,10 +561,30 @@ async def _handle_gemini_absence_call(session: SessionState, tool_call: ToolCall
         time_period = args.get("time_period")
         date_range = args.get("date_range")
         month = args.get("month")
-        year = args.get("year", 2025)
+        # ALWAYS use current year if not specified
+        year = args.get("year", datetime.now().year)
         
-        if time_period in {"today", None}:
+        logger.info(f"Query absence - args: {args}, time_period: {time_period}, query_type: {query_type}, year: {year}")
+        
+        # Check for month FIRST before checking time_period
+        if month:
+            # Convert month name to number and use the provided year
+            month_num = _month_name_to_number(month)
+            month_str = f"{int(year)}-{month_num:02d}"
+            logger.info(f"Querying month: {month_str} (month={month}, year={year})")
+            result = await absence_adapter.query_absence(query_type="byMonth", month=month_str)
+        elif date_range:
+            start_raw = date_range.get("start") or ""
+            end_raw = date_range.get("end") or ""
+            start_date = _normalize_date_str(start_raw)
+            end_date = _normalize_date_str(end_raw)
+            logger.info(f"Date range: {start_date} to {end_date}")
+            result = await absence_adapter.query_absence(
+                query_type="byDateRange", dates=[start_date, end_date]
+            )
+        elif time_period == "today":
             target_date = _normalize_date_str(args.get("date", "today"))
+            logger.info(f"Querying by date: {target_date}")
             result = await absence_adapter.query_absence(query_type="byDate", dates=[target_date])
         elif time_period == "yesterday":
             result = await absence_adapter.query_absence(
@@ -289,35 +596,34 @@ async def _handle_gemini_absence_call(session: SessionState, tool_call: ToolCall
             )
         elif time_period in {"this_week", "next_week", "last_week"}:
             start_date, end_date = _calculate_week_range(time_period)
+            logger.info(f"Week range: {start_date} to {end_date}")
             result = await absence_adapter.query_absence(
                 query_type="byDateRange", dates=[start_date, end_date]
             )
         elif time_period in {"this_month", "next_month", "last_month"}:
             start_date, end_date = _calculate_month_range(time_period)
-            result = await absence_adapter.query_absence(
-                query_type="byDateRange", dates=[start_date, end_date]
-            )
-        elif month:
-            month_str = f"{year}-{_month_name_to_number(month):02d}"
-            result = await absence_adapter.query_absence(query_type="byMonth", month=month_str)
-        elif date_range:
-            start_raw = date_range.get("start") or ""
-            end_raw = date_range.get("end") or ""
-            start_date = _normalize_date_str(start_raw)
-            end_date = _normalize_date_str(end_raw)
+            logger.info(f"Month range: {start_date} to {end_date}")
             result = await absence_adapter.query_absence(
                 query_type="byDateRange", dates=[start_date, end_date]
             )
         else:
-            result = await absence_adapter.query_absence(
-                query_type="byDate", dates=[_today()]
-            )
+            # Default to today if nothing else matches
+            target_date = _normalize_date_str(args.get("date", "today"))
+            logger.info(f"Querying by date (default): {target_date}")
+            result = await absence_adapter.query_absence(query_type="byDate", dates=[target_date])
         
         session.add_message("assistant", result.get("message", "Query completed"))
+        
+        # Pass details to action_data for frontend rendering
+        action_data = {"theme": "absence"}
+        if result.get("details"):
+            action_data.update(result["details"])
+        
         return ChatResponse(
             session_id=session.session_id,
             response=result.get("message", "Query completed"),
-            action_type="absence_query_result"
+            action_type="absence_query_result",
+            action_data=action_data
         )
     
     elif action == "query_vacation":
@@ -326,10 +632,17 @@ async def _handle_gemini_absence_call(session: SessionState, tool_call: ToolCall
             query_type="byStatus", status="V", dates=[target_date]
         )
         session.add_message("assistant", result.get("message", "Vacation query completed"))
+        
+        # Pass details to action_data for frontend rendering
+        action_data = {"theme": "absence"}
+        if result.get("details"):
+            action_data.update(result["details"])
+        
         return ChatResponse(
             session_id=session.session_id,
             response=result.get("message", "Vacation query completed"),
-            action_type="vacation_query_result"
+            action_type="vacation_query_result",
+            action_data=action_data
         )
     
     elif action == "check_employee_status":
@@ -341,7 +654,8 @@ async def _handle_gemini_absence_call(session: SessionState, tool_call: ToolCall
             return ChatResponse(
                 session_id=session.session_id,
                 response="Please specify which employee you'd like to check.",
-                action_type="employee_name_needed"
+                action_type="employee_name_needed",
+                action_data={"theme": "absence"}
             )
         
         result = await absence_adapter.check_employee_status(
@@ -353,15 +667,17 @@ async def _handle_gemini_absence_call(session: SessionState, tool_call: ToolCall
         session.add_message("assistant", result.get("message", "Status check completed"))
         return ChatResponse(
             session_id=session.session_id,
-        response=result.get("message", "Status check completed"),
-        action_type="employee_status_result"
-    )
+            response=result.get("message", "Status check completed"),
+            action_type="employee_status_result",
+            action_data={"theme": "absence"}
+        )
 
     # Default fallback
     return ChatResponse(
         session_id=session.session_id,
         response="I understand you want help with absence management. Could you be more specific?",
-        action_type="absence_clarification_needed"
+        action_type="absence_clarification_needed",
+        action_data={"theme": "absence"}
     )
 
 
@@ -382,6 +698,12 @@ async def _handle_confirmation_yes(session: SessionState, intent_result) -> Chat
             session_id=session.session_id,
             response="Please provide the reason:",
             action_type="awaiting_reason",
+            action_data={"theme": "absence"}
+        )
+    if action_type == "start_sow":
+        session.metadata.pop("pending_action", None)
+        return await _start_sow_session(
+            session, pending_action.get("data", {}).get("project_overview")
         )
 
     pending_action["type"] = "mark_absence"
@@ -395,6 +717,13 @@ async def _handle_confirmation_no(session: SessionState, intent_result) -> ChatR
         pending_action["type"] = "mark_absence"
         session.metadata.pop("waiting_for_reason", None)
         return await _execute_pending_action(session, pending_action)
+    if pending_action and pending_action.get("type") == "start_sow":
+        session.metadata.pop("pending_action", None)
+        return ChatResponse(
+            session_id=session.session_id,
+            response="Okay, I won't start the SOW workflow right now. Let me know if you change your mind!",
+            action_type="confirmation_cancelled",
+        )
 
     session.metadata.pop("pending_action", None)
     session.metadata.pop("waiting_for_reason", None)
@@ -412,6 +741,7 @@ async def _handle_reason_provided(session: SessionState, intent_result) -> ChatR
             session_id=session.session_id,
             response="Thanks for the information. How else can I help you?",
             action_type="reason_acknowledged",
+            action_data={"theme": "unified"}
         )
 
     pending_action["data"]["reason"] = intent_result.extracted_data.get("reason", "")
@@ -437,16 +767,21 @@ async def _execute_pending_action(session: SessionState, pending_action: Dict[st
 
         if result.get("success"):
             session.add_message("assistant", result.get("message", "Absence updated."))
+            details = result.get("details", {})
+            if not isinstance(details, dict):
+                details = {}
+            details["theme"] = "absence"
             return ChatResponse(
                 session_id=session.session_id,
                 response=result.get("message", "Absence updated."),
                 action_type="absence_mark",
-                action_data=result.get("details"),
+                action_data=details,
             )
         return ChatResponse(
             session_id=session.session_id,
             response=result.get("message", "Unable to update absence."),
             action_type="absence_error",
+            action_data={"theme": "absence"}
         )
 
     return ChatResponse(
@@ -460,21 +795,16 @@ async def _handle_gemini_sow_call(session: SessionState, tool_call: ToolCall) ->
     """Handle SOW session start from Gemini."""
     args = tool_call.arguments
     project_overview = args.get("projectOverview", "")
-    
-    # Initialize SOW session
-    if session.session_id not in SOW_SESSIONS:
-        SOW_SESSIONS[session.session_id] = SowState()
-    
-    sow_state = SOW_SESSIONS[session.session_id]
-    sow_state.project_overview = project_overview
-    sow_state.current_section = "services"
-    
-    session.add_message("assistant", "Starting SOW creation process...")
-    return ChatResponse(
-        session_id=session.session_id,
-        response="Great! I'll help you create a professional Statement of Work. Let's start with the services section.\n\nWhat services will be provided in this project?",
-        action_type="sow_section_prompt"
-    )
+
+    if _in_sow_session(session):
+        return ChatResponse(
+            session_id=session.session_id,
+            response="We are already in the SOW workflow. Please continue answering the prompts or type 'exit sow' to leave.",
+            action_type="sow_processing",
+            confirmation_buttons=[_build_exit_button()],
+        )
+
+    return _prompt_sow_confirmation(session, project_overview)
 
 
 async def _attempt_classifier_fallback(session: SessionState, user_message: str) -> Optional[ChatResponse]:
@@ -513,6 +843,17 @@ async def _attempt_classifier_fallback(session: SessionState, user_message: str)
         if tool_args:
             tool_call = ToolCall(name="absence_chat", arguments=tool_args)
             return await _handle_gemini_absence_call(session, tool_call, user_message)
+
+    sow_intents = {
+        IntentType.CREATE_SOW,
+        IntentType.GENERATE_SOW,
+        IntentType.SOW_REPORT,
+        IntentType.PROJECT_DETAILS_SOW,
+    }
+
+    if intent_result.intent_type in sow_intents:
+        overview = intent_result.extracted_data.get("project_overview") if intent_result.extracted_data else None
+        return _prompt_sow_confirmation(session, overview or user_message)
 
     return None
 
@@ -603,33 +944,86 @@ def _build_tool_args_from_intent(intent_result) -> Optional[Dict[str, Any]]:
 
 
 def _handle_gemini_guidance(session: SessionState, tool_call: ToolCall) -> ChatResponse:
-    """Handle guidance responses from Gemini."""
+    """Handle guidance responses from Gemini with personality and humor."""
     args = tool_call.arguments
-    guidance_type = args.get("guidance_type")
+    guidance_type = args.get("guidance_type", "help")
     explanation = args.get("explanation", "")
-    main_response = args.get("main_response")
+    main_response = args.get("main_response", "")
     suggested_actions = args.get("suggested_actions", [])
     
-    # Format response
+    # Format response with personality
     response_parts = []
+    
+    # Add emoji based on guidance type
+    emoji_map = {
+        "greeting": "👋",
+        "capabilities": "🤖",
+        "confused": "🤔",
+        "incomplete": "🧩",
+        "out_of_context": "🎯",
+        "ambiguous": "❓",
+        "help": "💡"
+    }
+    emoji = emoji_map.get(guidance_type, "💬")
+    
+    # Add explanation if provided (in italics)
     if explanation:
         response_parts.append(f"*{explanation}*\n")
     
-    response_parts.append(main_response)
+    # Add main response with emoji
+    if main_response:
+        response_parts.append(f"{emoji} {main_response}")
     
+    # Add suggested actions in a friendly format
     if suggested_actions:
-        response_parts.append("\n**You can try:**")
+        if guidance_type in ["confused", "incomplete", "ambiguous"]:
+            response_parts.append("\n**Here are some things I can help with:**")
+        else:
+            response_parts.append("\n**You can try:**")
+        
         for action in suggested_actions:
             response_parts.append(f"• {action}")
     
     response_text = "\n".join(response_parts)
     
-    # Add helpful buttons for common guidance types
+    # Add helpful buttons based on guidance type
     buttons = []
     if guidance_type in ["capabilities", "greeting", "help"]:
         buttons = [
-            ConfirmationButton(id="absence_help", label="Absence Management", value="Who is absent today?", style="primary"),
-            ConfirmationButton(id="sow_help", label="SOW Generation", value="Create a SOW", style="primary")
+            ConfirmationButton(
+                id="absence_help", 
+                label="📅 Check Absences", 
+                populate_input="Who is absent today?", 
+                style="primary"
+            ),
+            ConfirmationButton(
+                id="sow_help", 
+                label="📄 Create SOW", 
+                populate_input="Create a statement of work", 
+                style="primary"
+            )
+        ]
+    elif guidance_type in ["confused", "incomplete", "ambiguous", "out_of_context"]:
+        # Provide quick action buttons for confused users
+        buttons = [
+            ConfirmationButton(
+                id="quick_absence", 
+                label="📅 Absence Management", 
+                populate_input="Show me today's absences", 
+                style="secondary"
+            ),
+            ConfirmationButton(
+                id="quick_sow", 
+                label="📄 SOW Generation", 
+                populate_input="I want to create a SOW", 
+                style="secondary"
+            ),
+            ConfirmationButton(
+                id="quick_help", 
+                label="❓ What can you do?", 
+                populate_input="What can you help me with?", 
+                style="secondary"
+            )
         ]
     
     session.add_message("assistant", response_text)
@@ -725,12 +1119,22 @@ def _calculate_name_similarity(name1: str, name2: str) -> float:
     return SequenceMatcher(None, name1.lower(), name2.lower()).ratio()
 
 def _month_name_to_number(month_name: str) -> int:
-    """Convert month name to number."""
+    """Convert month name to number. Returns current month if not found."""
     months = {
-        'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
-        'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12
+        'january': 1, 'jan': 1,
+        'february': 2, 'feb': 2,
+        'march': 3, 'mar': 3,
+        'april': 4, 'apr': 4,
+        'may': 5,
+        'june': 6, 'jun': 6,
+        'july': 7, 'jul': 7,
+        'august': 8, 'aug': 8,
+        'september': 9, 'sep': 9, 'sept': 9,
+        'october': 10, 'oct': 10,
+        'november': 11, 'nov': 11,
+        'december': 12, 'dec': 12
     }
-    return months.get(month_name.lower(), 10)
+    return months.get(month_name.lower(), datetime.now().month)
 
 
 def _calculate_week_range(week_type: str) -> Tuple[str, str]:
@@ -769,3 +1173,317 @@ def _calculate_month_range(month_type: str) -> Tuple[str, str]:
 
     end = next_month - timedelta(days=1)
     return start.isoformat(), end.isoformat()
+
+# SOW Session Management
+from .services.sow_session import sow_session_manager, SOWStage
+from .services.sow_generator import sow_generator
+
+async def _handle_sow_confirmation(session: SessionState, tool_call: ToolCall, user_message: str) -> ChatResponse:
+    """Handle SOW intent with seamless transition"""
+    
+    # Check if there's a pending absence action - offer seamless transition
+    pending_action = session.metadata.get("pending_action")
+    if pending_action and pending_action.get("type") not in ["start_sow"]:
+        # Clear pending absence action and transition to SOW
+        session.metadata.pop("pending_action", None)
+        session.metadata.pop("waiting_for_reason", None)
+        logger.info(f"Seamlessly transitioning from absence to SOW for session {session.session_id}")
+    
+    # Set pending action for SOW confirmation (compatible with existing system)
+    project_overview = tool_call.arguments.get("projectOverview", "")
+    session.metadata["pending_action"] = {
+        "type": "start_sow",
+        "data": {"project_overview": project_overview}
+    }
+    
+    # Ask for confirmation before starting SOW session
+    return ChatResponse(
+        session_id=session.session_id,
+        response="🔴 **SOW Generation Request Detected**\n\nDo you want to start the SOW (Statement of Work) generation process?\n\n⚠️ **Note**: This will switch to SOW mode with a red theme and collect information step by step. You can exit anytime by typing 'exit sow'.",
+        action_type="sow_confirmation_needed",
+        confirmation_buttons=[
+            ConfirmationButton(id="start_sow", label="Yes, Start SOW Generation", value="yes", style="primary"),
+            ConfirmationButton(id="cancel_sow", label="No, Stay in Normal Mode", value="no", style="secondary")
+        ]
+    )
+
+async def _handle_sow_session_input(session: SessionState, user_message: str) -> ChatResponse:
+    """Handle input during active SOW session"""
+    
+    # Check for exit command
+    if user_message.lower().strip() in ["exit sow", "exit", "quit sow", "cancel sow"]:
+        result = sow_session_manager.exit_sow_session(session.session_id)
+        session.metadata.pop("sow_active", None)
+        
+        return ChatResponse(
+            session_id=session.session_id,
+            response=result["message"],
+            action_type="sow_exited"
+        )
+    
+    # Check for SOW confirmation responses
+    if user_message.lower().strip() == "start_sow_confirmed":
+        result = sow_session_manager.start_sow_session(session.session_id)
+        session.metadata["sow_active"] = True
+        
+        return ChatResponse(
+            session_id=session.session_id,
+            response=result["message"],
+            action_type="sow_started",
+            action_data={
+                "theme": "sow",
+                "show_exit": True,
+                "progress": result.get("progress", 1),
+                "total_steps": result.get("total_steps", 8)
+            }
+        )
+    
+    elif user_message.lower().strip() == "cancel_sow":
+        return ChatResponse(
+            session_id=session.session_id,
+            response="✅ Staying in normal mode. How can I help you with absence management?",
+            action_type="sow_cancelled"
+        )
+    
+    # Process SOW input
+    result = sow_session_manager.process_sow_input(session.session_id, user_message)
+    
+    if "error" in result:
+        return ChatResponse(
+            session_id=session.session_id,
+            response=f"❌ Error: {result['error']}",
+            action_type="sow_error"
+        )
+    
+    # Check if document generation was requested
+    if result.get("action") == "generate_document":
+        return await do_generate_sow(session, result["session_data"])
+    
+    # Return SOW response
+    response_data = {
+        "theme": result.get("theme", "sow"),
+        "show_exit": result.get("show_exit", True),
+        "progress": result.get("progress", 1),
+        "total_steps": result.get("total_steps", 8)
+    }
+    
+    # Add buttons if present
+    if "buttons" in result:
+        response_data["confirmation_buttons"] = [
+            ConfirmationButton(
+                id=btn["id"], 
+                label=btn["label"], 
+                value=btn["value"],
+                style=btn.get("style", "secondary")
+            ) for btn in result["buttons"]
+        ]
+    
+    return ChatResponse(
+        session_id=session.session_id,
+        response=result["message"],
+        action_type="sow_step_completed",
+        action_data=response_data
+    )
+
+async def do_generate_sow(session: SessionState, collected_data: Dict[str, Any]) -> ChatResponse:
+    """Single entry point for SOW generation - prevents dual triggers"""
+    async with _lock_for(session.session_id):
+        try:
+            # Check state machine - prevent invalid transitions
+            current_phase = collected_data.get("sow_phase", "ready_to_generate")
+            if current_phase == "generating":
+                return ChatResponse(
+                    session_id=session.session_id,
+                    response="⏳ SOW generation already in progress. Please wait...",
+                    action_type="info"
+                )
+            elif current_phase == "generated":
+                return ChatResponse(
+                    session_id=session.session_id,
+                    response="✅ SOW already generated. Start a new SOW if needed.",
+                    action_type="info"
+                )
+            
+            # Set generating state
+            collected_data["sow_phase"] = "generating"
+            
+            logger.info(f"[SOW] START generate -> session={session.session_id}")
+            
+            # Progress bubble (non-action)
+            session.add_message("assistant", "🤖 Generating your SOW… please wait.")
+            logger.info(f"[SOW] progress bubble -> session={session.session_id}")
+            
+            # Call new_sow application directly via HTTP API (port 8002)
+            # new_sow now has /api/generate-direct endpoint with Gemini AI processing
+            import aiohttp
+            
+            # Prepare payload for new_sow
+            new_sow_url = "http://localhost:8002/api/generate-direct"
+            
+            # Convert resources list to string format
+            resources_list = collected_data.get("resources", [])
+            resources_str = ""
+            if isinstance(resources_list, list):
+                resource_lines = []
+                for r in resources_list:
+                    role = r.get("role", "Team Member")
+                    count = r.get("count", 1)
+                    resource_lines.append(f"{role} - {count} person{'s' if count > 1 else ''} - 100% allocation")
+                resources_str = "\\n".join(resource_lines)
+            else:
+                resources_str = str(resources_list)
+            
+            # Convert contacts dict to string format
+            contacts_dict = collected_data.get("contacts", {})
+            contacts_str = ""
+            if isinstance(contacts_dict, dict) and contacts_dict:
+                contacts_str = f"""Contractor Contact:
+Name: Professional Services Team
+Company: Professional Services Inc.
+Role: Project Director
+Email: pm@company.com
+Phone: +1-555-0123
+Address: 123 Business St, City, State
+
+Client Contact:
+Name: {contacts_dict.get('contact_person', 'Client Representative')}
+Company: {contacts_dict.get('name', 'Client Organization')}
+Role: {contacts_dict.get('designation', 'Project Sponsor')}
+Email: {contacts_dict.get('email', 'client@company.com')}
+Phone: {contacts_dict.get('phone', '+1-555-0456')}
+Address: {contacts_dict.get('address', 'Client Address')}"""
+                contacts_str = contacts_str.replace('\n', '\\n')
+            
+            # Convert collected_data to new_sow format
+            payload = {
+                "template_path": "sample_sow_template.docx",
+                "project_data": {
+                    "project_info": collected_data.get("project_info", ""),
+                    "services": collected_data.get("services", ""),
+                    "deliverables": collected_data.get("deliverables", ""),
+                    "timeline": collected_data.get("timeline", ""),
+                    "resources": resources_str,
+                    "contacts": contacts_str,
+                    "budget": collected_data.get("budget", "")
+                },
+                "session_id": session.session_id
+            }
+            
+            logger.info(f"[SOW] Calling new_sow API at {new_sow_url}")
+            
+            try:
+                async with aiohttp.ClientSession() as http_session:
+                    async with http_session.post(new_sow_url, json=payload, timeout=aiohttp.ClientTimeout(total=180)) as response:
+                        if response.status == 200:
+                            res = await response.json()
+                            logger.info(f"[SOW] new_sow API success: {res}")
+                            res["success"] = True
+                        else:
+                            error_text = await response.text()
+                            logger.error(f"[SOW] new_sow API error: {response.status} - {error_text}")
+                            res = {"success": False, "error": f"API error: {response.status}"}
+            except Exception as e:
+                logger.error(f"[SOW] new_sow API call failed: {e}")
+                res = {"success": False, "error": str(e)}
+            
+            if not res.get("success"):
+                collected_data["sow_phase"] = "error"
+                logger.error(f"[SOW] FAILED -> session={session.session_id} error={res.get('error')}")
+                return ChatResponse(
+                    session_id=session.session_id,
+                    response=f"❌ SOW failed: {res.get('error')}",
+                    action_type="error"
+                )
+            
+            # Mark SOW session as completed - CLEAR ALL SOW STATE
+            if hasattr(sow_session_manager, 'exit_sow_session'):
+                sow_session_manager.exit_sow_session(session.session_id)
+            
+            # Clear all SOW-related metadata and session data
+            session.metadata.pop("sow_active", None)
+            session.metadata.pop("active_sow", None)
+            session.metadata.pop("pending_action", None)
+            SOW_SESSIONS.pop(session.session_id, None)
+            
+            # Emit the ONLY success action here
+            filename = res.get("filename", "SOW_document.docx")
+            # Construct proper download URL for unified chat backend
+            download_url = f"http://localhost:8001/api/sow/download/{filename}"
+            
+            btn = {
+                "label": "⬇️ Download SOW", 
+                "action": "open_url",
+                "url": download_url, 
+                "style": "primary"
+            }
+            
+            # Set generated state
+            collected_data["sow_phase"] = "generated"
+            
+            logger.info(f"[SOW] SUCCESS card EMIT -> session={session.session_id} url={download_url}")
+            
+            return ChatResponse(
+                session_id=session.session_id,
+                response="✅ **SOW Document Generated Successfully!**\n\nYour document is ready and will download automatically.",
+                action_type="sow_document_ready",
+                download_url=download_url,
+                action_data={
+                    "buttons": [btn], 
+                    "filename": filename,
+                    "theme": "normal",
+                    "loading": False,
+                    "auto_download": True,
+                    "download_url": download_url
+                }
+            )
+                
+        except Exception as e:
+            collected_data["sow_phase"] = "error"
+            logger.error(f"[SOW] ERROR -> session={session.session_id} error={e}")
+            return ChatResponse(
+                session_id=session.session_id,
+                response=f"❌ Failed to generate SOW document: {str(e)}",
+                action_type="sow_generation_error",
+                action_data={"theme": "sow", "show_exit": True}
+            )
+
+# Add SOW download endpoints
+@app.get("/api/sow/download/{filename}")
+async def download_sow_document(filename: str):
+    """Download generated SOW document"""
+    try:
+        # Check generated_docs_sow folder at project root
+        project_root = Path(__file__).resolve().parents[2]
+        file_path = project_root / "generated_docs_sow" / filename
+        
+        if file_path.exists():
+            return FileResponse(
+                path=str(file_path),
+                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document" if filename.endswith('.docx') else "text/plain",
+                filename=filename
+            )
+        else:
+            raise HTTPException(status_code=404, detail="File not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/sow/documents/{session_id}/{filename}")
+async def download_sow_document_by_session(session_id: str, filename: str):
+    """Download generated SOW document by session"""
+    try:
+        # Check generated_docs_sow folder at project root
+        project_root = Path(__file__).resolve().parents[2]
+        file_path = project_root / "generated_docs_sow" / filename
+        
+        if file_path.exists():
+            return FileResponse(
+                path=str(file_path),
+                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document" if filename.endswith('.docx') else "text/plain",
+                filename=filename
+            )
+        
+        raise HTTPException(status_code=404, detail="File not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# SOW generation is now handled immediately in the chat endpoint

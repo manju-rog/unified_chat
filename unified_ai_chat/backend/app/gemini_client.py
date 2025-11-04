@@ -70,6 +70,13 @@ class GeminiClient:
             
             # Add context if provided
             context_parts = []
+            
+            # ALWAYS include current date in context
+            from datetime import datetime
+            today = datetime.now().strftime("%Y-%m-%d")
+            day_name = datetime.now().strftime("%A")
+            context_parts.append(f"TODAY'S DATE: {today} ({day_name})")
+            
             if context:
                 context_parts.append(context)
             
@@ -162,6 +169,7 @@ class GeminiClient:
         parts = candidate.content.parts
         tool_calls: List[ToolCall] = []
         text_fragments: List[str] = []
+        thinking_parts: List[str] = []
 
         print(f"🧩 Response parts count: {len(parts)}")
         
@@ -176,6 +184,14 @@ class GeminiClient:
                 print(f"    🛠️ FUNCTION CALL: {name}")
                 print(f"    📋 Raw Args Type: {type(raw_args)}")
                 print(f"    📋 Raw Args: {raw_args}")
+                
+                # Build thinking description
+                thinking_parts.append(f"Calling {name}")
+                if name == "absence_chat":
+                    action = raw_args.get("action", "unknown")
+                    thinking_parts.append(f"Action: {action}")
+                elif name == "start_sow_session":
+                    thinking_parts.append("Initiating SOW generation flow")
                 
                 if isinstance(raw_args, str):
                     try:
@@ -195,9 +211,17 @@ class GeminiClient:
             else:
                 print(f"    ❓ UNKNOWN PART TYPE: {type(part)}")
 
+        # Generate thinking summary
+        thinking = None
+        if tool_calls:
+            thinking = " → ".join(thinking_parts) if thinking_parts else f"Processing {tool_calls[0].name}"
+        elif text_fragments:
+            thinking = "Generating response"
+
         result = {
             "tool_calls": tool_calls,
             "text": "\n".join(fragment for fragment in text_fragments if fragment),
+            "thinking": thinking,
         }
         
         print(f"🎯 FINAL PARSED RESULT:")
@@ -205,6 +229,7 @@ class GeminiClient:
         for tc in tool_calls:
             print(f"    - {tc.name}: {tc.arguments}")
         print(f"  Text: '{result['text']}'")
+        print(f"  Thinking: '{result.get('thinking')}'")
         print(f"{'='*50}")
         
         return result
@@ -213,8 +238,15 @@ class GeminiClient:
 
     @staticmethod
     def _system_prompt() -> str:
+        from datetime import datetime
+        today = datetime.now().strftime("%Y-%m-%d")
+        day_name = datetime.now().strftime("%A")
+        
+        current_year = datetime.now().year
+        current_month = datetime.now().strftime("%B")
+        
         lines = [
-            "You are the Unified Operations AI Assistant. Today's date is 2025-10-14. Always respond by calling one of the registered tools.",
+            f"You are the Unified Operations AI Assistant. Today's date is {today} ({day_name}). Current year is {current_year}. Current month is {current_month}. Always respond by calling one of the registered tools.",
             "",
             "**Absence Management — use `absence_chat`:**",
             "- action='mark_absence' with `employee_name`, `status` (A/P/V), optional `reason`, and `date`.",
@@ -222,17 +254,43 @@ class GeminiClient:
             "- action='query_absence' with `time_period`, `date`, `date_range`, or (`month`, `year`).",
             "- action='query_vacation' (optional `date`) to list who is on vacation.",
             "- action='check_employee_status' with `employee_name`, optional `date`, and optional `query_type='leave_status'`.",
-            "Use the EMPLOYEE_DIRECTORY context—rely on the backend for fuzzy matching.",
             "",
-            "**Dates & Periods:** support tokens like today/yesterday/tomorrow; use time_period='this_week'/'next_week'/'last_week' and 'this_month'/'next_month'/'last_month'; provide explicit `date_range` {start, end} for 'between' queries; supply `month` (and optional `year`, default 2025) for named months.",
+            "**EMPLOYEE NAME HANDLING:**",
+            "- You will receive EMPLOYEE_DIRECTORY in context with format: Name|ID|Department",
+            "- When user says 'someone', 'somebody', 'anyone', or doesn't specify a name, pick the FIRST employee from the directory",
+            "- NEVER use 'Unknown', 'someone', 'somebody' as employee_name - always use an actual name from the directory",
+            "- The backend will handle fuzzy matching and disambiguation if needed",
+            "- If the directory is empty or not provided, then use `provide_guidance` to ask for the name",
+            "",
+            f"**CRITICAL DATE RULES:**",
+            f"- TODAY is {today} ({day_name})",
+            f"- CURRENT YEAR is {current_year} - ALWAYS use this year unless user explicitly mentions a different year",
+            f"- CURRENT MONTH is {current_month}",
+            f"- When user says 'September absences' or any month name WITHOUT a year, use year={current_year}",
+            f"- When user says 'this week', calculate from today ({today})",
+            f"- When user says 'this month', use current month ({current_month} {current_year})",
+            f"- NEVER assume year 2024 or any past year - ALWAYS use {current_year} unless explicitly stated otherwise",
+            "",
+            "**Dates & Periods:** support tokens like today/yesterday/tomorrow; use time_period='this_week'/'next_week'/'last_week' and 'this_month'/'next_month'/'last_month'; provide explicit `date_range` {start, end} for 'between' queries; supply `month` (month name like 'september') and `year` (use current year if not specified) for named months.",
             "",
             "**Reasons:** when marking an absence without a reason, return confirmation buttons asking whether to add one. If the user supplies a reason, call `absence_chat` again with that reason included.",
             "",
-            "**SOW Generation:** trigger `start_sow_session` for any SOW request, use `update_sow_section` to collect sections, and call `finalize_sow` only when all sections are complete.",
+            "**SOW Generation:** ALWAYS use `start_sow_session` for ANY SOW-related request including 'create sow', 'generate sow', 'statement of work', 'sow generation'. Use `update_sow_section` to collect sections, and call `finalize_sow` only when all sections are complete.",
             "",
-            "**Guidance:** use `provide_guidance` for greetings, capability questions, or ambiguous/mixed intents, including a short italic explanation and suggested actions.",
+            "**EXIT COMMANDS:** If user says 'exit sow', 'exit', 'quit', 'cancel', 'stop sow', or 'exit_sow', they want to exit SOW mode. Use `provide_guidance` with guidance_type='help' and main_response='Exiting SOW mode. You're back to the main assistant.' This is a VALID operation, not out_of_context.",
+            "",
+            "**Guidance & Confusion Handling:** use `provide_guidance` for:",
+            "- Greetings, capability questions, or help requests",
+            "- Ambiguous, incomplete, or confusing queries where you need more information",
+            "- Out-of-context messages that don't relate to absence or SOW",
+            "- Vague requests like 'do something', 'help me', 'what can you do'",
+            "- EXIT commands like 'exit sow', 'quit', 'cancel' (use guidance_type='help')",
+            "When confused, be friendly and conversational. Use light humor when appropriate. Ask clarifying questions in a natural way.",
+            "For guidance_type, use: 'greeting', 'capabilities', 'confused', 'incomplete', 'out_of_context', 'ambiguous', or 'help'.",
             "",
             "Be decisive: interpret any phrasing about absences, vacations, or leave, choose the correct action, and call the tool with complete parameters. Never ask the user to rephrase—you can resolve typos using the employee directory.",
+            "",
+            "**CRITICAL SOW DETECTION:** When user mentions 'sow', 'statement of work', 'create sow', 'generate sow', or similar, ALWAYS call `start_sow_session` immediately. Do not use `provide_guidance` for SOW requests.",
             "",
             "**ABSOLUTE RULE - NEVER BREAK:** If the user message is ONLY 'yes', 'no', 'y', 'n', or similar single-word confirmations, you MUST NOT call ANY tool. Do not use provide_guidance, do not use absence_chat. Return completely empty response. The system has special handlers for these. This rule overrides everything else.",
         ]
@@ -323,16 +381,39 @@ class GeminiClient:
                     },
                     {
                         "name": "provide_guidance",
-                        "description": "Offer help or disambiguation when no direct action should be executed.",
+                        "description": (
+                            "Offer help, clarification, or friendly responses when no direct action should be executed. "
+                            "Use this for greetings, capability questions, confused/incomplete/ambiguous queries, or out-of-context messages. "
+                            "Be conversational, friendly, and use light humor when appropriate."
+                        ),
                         "parameters": {
                             "type": "object",
                             "properties": {
-                                "guidance_type": {"type": "string"},
-                                "explanation": {"type": "string"},
-                                "main_response": {"type": "string"},
+                                "guidance_type": {
+                                    "type": "string",
+                                    "enum": [
+                                        "greeting",
+                                        "capabilities", 
+                                        "confused",
+                                        "incomplete",
+                                        "out_of_context",
+                                        "ambiguous",
+                                        "help"
+                                    ],
+                                    "description": "Type of guidance being provided"
+                                },
+                                "explanation": {
+                                    "type": "string",
+                                    "description": "Brief italic explanation of why you're asking for clarification (optional)"
+                                },
+                                "main_response": {
+                                    "type": "string",
+                                    "description": "Main friendly response with personality. Can include light humor for confused/incomplete queries."
+                                },
                                 "suggested_actions": {
                                     "type": "array",
-                                    "items": {"type": "string"}
+                                    "items": {"type": "string"},
+                                    "description": "Specific examples the user can try"
                                 }
                             },
                             "required": ["guidance_type", "main_response"],

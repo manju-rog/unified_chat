@@ -427,7 +427,20 @@ Use the extract_sow_data function to return all information in structured format
                 logger.error("No candidates in Gemini response")
                 return False
             
-            function_call = response.candidates[0].content.parts[0].function_call
+            # Check if response has parts
+            if not response.candidates[0].content.parts:
+                logger.error("No parts in Gemini response")
+                logger.error(f"Response: {response}")
+                return False
+            
+            # Check if first part has function_call
+            first_part = response.candidates[0].content.parts[0]
+            if not hasattr(first_part, 'function_call') or not first_part.function_call:
+                logger.error("No function_call in response")
+                logger.error(f"Response text: {response.text if hasattr(response, 'text') else 'N/A'}")
+                return False
+            
+            function_call = first_part.function_call
             
             if function_call.name != "extract_sow_data":
                 logger.error(f"Unexpected function called: {function_call.name}")
