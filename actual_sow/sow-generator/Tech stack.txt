@@ -1,0 +1,26 @@
+Tech stack:
+
+UI for inputs prompts - reactJS
+
+File system(file/folders to store data)
+
+Embedding process - Langchain(python impl)
+
+Opensource text chunking methods for PDF.
+indepth for image extraction and text etxeraction go for GPT-4 and similar.
+
+Embedding - BAAI BGE-M3
+	  - Qwen3-Embedding-8B
+Open source models for embdedding
+
+Vector DB:
+chroma - no role based access, pricing varies
+milvus - has role based access, 65$ for 50k vector
+
+LLM for context and query analuysis
+Gemini
+Llama
+
+
+
+

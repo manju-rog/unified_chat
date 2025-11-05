@@ -1,19 +1,18 @@
 from typing import Dict, Optional
 from datetime import datetime, timedelta
 import logging
-from ..models.sow_models import SessionData, ConversationStage
-from ...config import get_settings
+from app.models.sow_models import SessionData, ConversationStage
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 class StateService:
     """Service for managing session state (in-memory)"""
-
+    
     def __init__(self):
         # In-memory storage (use Redis in production)
         self._sessions: Dict[str, SessionData] = {}
-        settings = get_settings()
-        self.session_timeout = getattr(settings, 'session_timeout', 3600)
+        self.session_timeout = settings.SESSION_TIMEOUT
     
     def create_session(self, session_id: str, template_id: str = None, template_path: str = None) -> SessionData:
         """Create new session"""

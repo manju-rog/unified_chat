@@ -4,25 +4,18 @@ import os
 import logging
 from typing import Dict, List, Any, Optional
 from datetime import datetime
-from ...config import get_settings
-from ..models.sow_models import SOWContext
-from ..utils.helpers import sanitize_filename, generate_document_id
+from app.config import settings
+from app.models.sow_models import SOWContext
+from app.utils.helpers import sanitize_filename, generate_document_id
 
 logger = logging.getLogger(__name__)
 
 class DocumentService:
     """Service for handling DOCX template operations"""
-
+    
     def __init__(self):
-        settings = get_settings()
-        # Use paths relative to sow_components or create them
-        sow_components_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.template_dir = os.path.join(sow_components_dir, "templates")
-        self.output_dir = os.path.join(sow_components_dir, "output")
-
-        # Create directories if they don't exist
-        os.makedirs(self.template_dir, exist_ok=True)
-        os.makedirs(self.output_dir, exist_ok=True)
+        self.template_dir = settings.TEMPLATE_DIR
+        self.output_dir = settings.OUTPUT_DIR
     
     def save_template(self, file_content: bytes, filename: str) -> tuple[str, str]:
         """Save uploaded template file"""

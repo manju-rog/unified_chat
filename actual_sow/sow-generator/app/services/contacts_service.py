@@ -4,9 +4,7 @@ import os
 class ContactsService:
     def __init__(self, json_path=None):
         if json_path is None:
-            # Get path relative to this file
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            json_path = os.path.join(os.path.dirname(current_dir), "contacts_data.json")
+            json_path = os.path.join(os.getcwd(), "contacts_data.json")
         with open(json_path, "r") as f:
             self.data = json.load(f)
 

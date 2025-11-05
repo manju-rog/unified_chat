@@ -12,7 +12,7 @@ from ..config import get_settings
 from ..models.chat import SessionState
 
 # Import the new SOW components
-from ..sow_components.agents.data_collector import DataCollectorAgent
+from ..sow_components.agents.data_collector_v2 import DataCollectorAgentV2
 from ..sow_components.services.contacts_service import ContactsService
 from ..sow_components.services.document_service import DocumentService
 from ..sow_components.services.state_service import state_service
@@ -30,7 +30,7 @@ class NewSOWAdapter:
     
     def __init__(self):
         self._settings = get_settings()
-        self.data_collector = DataCollectorAgent()
+        self.data_collector = DataCollectorAgentV2()
         self.contacts_service = ContactsService()
         self.document_service = DocumentService()
         self.state_service = state_service
