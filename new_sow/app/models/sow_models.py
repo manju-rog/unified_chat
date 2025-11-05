@@ -38,7 +38,7 @@ class Deliverable(BaseModel):
     
     def get_full_description(self) -> str:
         """Get description with sprint information"""
-        if self.sprint_start and self.sprint_end:
+        if self.sprint_start is not None and self.sprint_end is not None and self.sprint_duration is not None:
             sprint_info = f"Delivery: Sprints {self.sprint_start}-{self.sprint_end} ({self.sprint_duration} sprints)"
             return f"{self.description}\n{sprint_info}"
         return self.description

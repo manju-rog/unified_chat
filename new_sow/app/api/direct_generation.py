@@ -38,25 +38,46 @@ async def generate_direct(request: DirectGenerationRequest):
             template_path=request.template_path
         )
         
-        # Store raw responses in the format expected by data collector
+        # Process data through conversation stages to trigger special handling (e.g., standard services)
         project_data = request.project_data
         
-        session.raw_responses = {
-            "project_info": project_data.get("project_info", ""),
-            "services": project_data.get("services", ""),
-            "deliverables": project_data.get("deliverables", ""),
-            "timeline": project_data.get("timeline", ""),
-            "resources": project_data.get("resources", ""),
-            "contacts": project_data.get("contacts", ""),
-            "budget": project_data.get("budget", "")
-        }
+        # Define stage order
+        stages = [
+            ("project_info", ConversationStage.PROJECT_INFO),
+            ("services", ConversationStage.SERVICES),
+            ("deliverables", ConversationStage.DELIVERABLES),
+            ("timeline", ConversationStage.TIMELINE),
+            ("resources", ConversationStage.RESOURCES),
+            ("contacts", ConversationStage.CONTACTS),
+            ("budget", ConversationStage.BUDGET)
+        ]
         
-        # Mark as completed to trigger data extraction
-        session.current_stage = ConversationStage.COMPLETED
+        # Process each stage through the data collector to trigger special logic
+        logger.info("🔄 Processing data through conversation stages...")
+        for data_key, stage in stages:
+            user_input = project_data.get(data_key, "")
+            if user_input:
+                session.current_stage = stage
+                logger.info(f"   Processing stage: {stage.value} with input: {user_input[:50]}...")
+                
+                # Process through data collector (this triggers standard services detection)
+                _, session = await orchestrator.data_collector.process_user_input(
+                    session,
+                    user_input
+                )
         
-        # Extract and process data using Gemini
-        logger.info("🤖 Extracting data with Gemini AI...")
-        success = await orchestrator.data_collector._extract_all_data_with_function_calling(session)
+        # After all stages, session should be at COMPLETED
+        logger.info(f"✅ All stages processed. Current stage: {session.current_stage.value}")
+        
+        # Verify we reached COMPLETED stage
+        if session.current_stage != ConversationStage.COMPLETED:
+            logger.warning(f"⚠️ Expected COMPLETED stage but got {session.current_stage.value}")
+            # Force completion if needed
+            session.current_stage = ConversationStage.COMPLETED
+            success = await orchestrator.data_collector._extract_all_data_with_function_calling(session)
+        else:
+            # Data extraction already happened in process_user_input
+            success = session.is_completed
         
         if not success:
             raise HTTPException(

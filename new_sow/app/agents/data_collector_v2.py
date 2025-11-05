@@ -515,13 +515,22 @@ User Response: {response}
             deliverables_data = data.get("deliverables", [])
             
             for idx, deliv in enumerate(deliverables_data, 1):
+                sprint_start = deliv.get("sprint_start")
+                sprint_end = deliv.get("sprint_end")
+                sprint_duration = deliv.get("sprint_duration")
+                
+                # Calculate sprint_duration if not provided but start and end are available
+                if sprint_duration is None and sprint_start is not None and sprint_end is not None:
+                    sprint_duration = sprint_end - sprint_start + 1
+                    logger.info(f"   Calculated sprint_duration for '{deliv.get('name', '')}': {sprint_duration}")
+                
                 deliverable = Deliverable(
                     id=idx,
                     name=deliv.get("name", ""),
                     description=deliv.get("description", ""),
-                    sprint_start=deliv.get("sprint_start"),
-                    sprint_end=deliv.get("sprint_end"),
-                    sprint_duration=deliv.get("sprint_duration")
+                    sprint_start=sprint_start,
+                    sprint_end=sprint_end,
+                    sprint_duration=sprint_duration
                 )
                 session_data.sow_context.deliverables.append(deliverable)
             

@@ -44,37 +44,96 @@ class SowAdapter:
             state.data["project_info"] = txt
             state.stage = "services"
             resp["message"] = "✅ **Project Info captured!**\n\n**Step 2: Services**\nChoose the type of services for this SOW:"
+            
+            # Load standard services from new_sow for button
+            try:
+                import importlib.util
+                from pathlib import Path
+                
+                # Direct path to standard_services.py
+                # parents[4] goes: sow_direct.py -> services -> app -> backend -> unified_ai_chat -> project root
+                standard_services_path = Path(__file__).resolve().parents[4] / "new_sow" / "app" / "services" / "standard_services.py"
+                
+                # Load module from file
+                spec = importlib.util.spec_from_file_location("standard_services", standard_services_path)
+                standard_services_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(standard_services_module)
+                
+                STANDARD_SERVICES = standard_services_module.STANDARD_SERVICES
+                standard_service = STANDARD_SERVICES[0]
+                standard_text = f"SERVICES: {standard_service['name']}\n\n{standard_service['description']}"
+                print(f"✅ Loaded standard services from new_sow for button")
+            except Exception as e:
+                print(f"⚠️ Could not load standard services for button: {e}")
+                import traceback
+                traceback.print_exc()
+                standard_text = "SERVICES: Discovery & Planning (3 weeks), Data Migration (4 weeks), Application Development (8 weeks), Testing & QA (2 weeks), Deployment & Go-Live (1 week)"
+            
             resp["confirmation_buttons"] = [
-                {"id":"sow_service_standard","label":"📦 Standard Package","populate_input":"SERVICES: Discovery & Planning (3 weeks), Data Migration (4 weeks), Application Development (8 weeks), Testing & QA (2 weeks), Deployment & Go-Live (1 week)","style":"primary"},
+                {"id":"sow_service_standard","label":"📦 Standard Package","populate_input":standard_text,"style":"primary"},
                 {"id":"sow_service_custom","label":"🛠️ Custom Services","populate_input":"Custom Services (to be defined based on project requirements)","style":"secondary"},
             ]
             return state, resp
         
         if state.stage == "services":
             # Handle button clicks, keywords, OR manual typing
+            # CRITICAL: Store just "standard" or "custom" keyword for new_sow to process
             if txt.startswith("SERVICES:"):
-                # Full standard package text (from button)
-                state.data["services"] = txt
+                # Full standard package text (from button) - extract keyword
+                state.data["services"] = "standard"  # ← Pass keyword to new_sow
                 service_type = "Standard Package"
+                
+                # Load preview text for display only
+                try:
+                    import importlib.util
+                    from pathlib import Path
+                    standard_services_path = Path(__file__).resolve().parents[4] / "new_sow" / "app" / "services" / "standard_services.py"
+                    spec = importlib.util.spec_from_file_location("standard_services", standard_services_path)
+                    standard_services_module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(standard_services_module)
+                    STANDARD_SERVICES = standard_services_module.STANDARD_SERVICES
+                    standard_service = STANDARD_SERVICES[0]
+                    preview_text = f"{standard_service['name']}\n\n{standard_service['description'][:200]}..."
+                except:
+                    preview_text = "Standard services package (15 detailed scope items)"
             elif txt.startswith("Custom Services"):
-                # Full custom services text (from button)
-                state.data["services"] = txt
+                # Full custom services text (from button) - extract keyword
+                state.data["services"] = "custom"  # ← Pass keyword to new_sow
                 service_type = "Custom Services"
+                preview_text = "Custom services (to be defined based on project requirements)"
             elif txt.lower() == "standard":
-                # Short keyword - expand to full
-                state.data["services"] = "SERVICES: Discovery & Planning (3 weeks), Data Migration (4 weeks), Application Development (8 weeks), Testing & QA (2 weeks), Deployment & Go-Live (1 week)"
+                # Short keyword - pass directly to new_sow
+                state.data["services"] = "standard"  # ← Pass keyword to new_sow
                 service_type = "Standard Package"
+                
+                # Load preview text for display only
+                try:
+                    import importlib.util
+                    from pathlib import Path
+                    standard_services_path = Path(__file__).resolve().parents[4] / "new_sow" / "app" / "services" / "standard_services.py"
+                    spec = importlib.util.spec_from_file_location("standard_services", standard_services_path)
+                    standard_services_module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(standard_services_module)
+                    STANDARD_SERVICES = standard_services_module.STANDARD_SERVICES
+                    standard_service = STANDARD_SERVICES[0]
+                    preview_text = f"{standard_service['name']}\n\n{standard_service['description'][:200]}..."
+                    print(f"✅ Loaded standard services preview from new_sow")
+                except Exception as e:
+                    print(f"⚠️ Could not load standard services preview: {e}")
+                    preview_text = "Standard services package (15 detailed scope items)"
             elif txt.lower() == "custom":
-                # Short keyword - expand to full
-                state.data["services"] = "Custom Services (to be defined based on project requirements)"
+                # Short keyword - pass directly to new_sow
+                state.data["services"] = "custom"  # ← Pass keyword to new_sow
                 service_type = "Custom Services"
+                preview_text = "Custom services (to be defined based on project requirements)"
             else:
                 # Accept ANY manual text - user typed their own services
-                state.data["services"] = txt
+                state.data["services"] = txt  # ← Pass custom text to new_sow
                 service_type = "Custom Services"
+                preview_text = txt
             
             state.stage = "deliverables"
-            resp["message"] = f"✅ **{service_type} selected!**\n\n**Services Details:**\n{state.data['services']}\n\n**Step 3: Deliverables**\nNow tell me about the specific deliverables for this project:"
+            resp["message"] = f"✅ **{service_type} selected!**\n\n**Services Preview:**\n{preview_text}\n\n**Step 3: Deliverables**\nNow tell me about the specific deliverables for this project:"
             return state, resp
         
         if state.stage == "deliverables":

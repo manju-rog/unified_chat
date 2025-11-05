@@ -1,0 +1,51 @@
+=== G-COP SOW - QUICK COPY-PASTE INPUTS ===
+
+STAGE 1: PROJECT INFO
+---------------------
+Document Number: GB-16796941, Design and Development / Test / Post-Go-live support for OPF to G-COP Data Extraction, Compression, and transfer Implementation. Oracle will cover the following activities: Design Review & Feedback, Development of Applications, File Transfer mechanism, Quality Assurance (Connectivity, SIT, Functional, Non-Functional including Performance, HA & DR), TDM Coordination, Pre-Go Live Support, Go Live Support, Post Go Live Support
+
+
+STAGE 2: SERVICES (Select Custom, then paste)
+----------------------------------------------
+Requirements Review & Feedback (1 week), Sprint #1: OPF File Extraction interface development (2 weeks), Sprint #2: File Compression & Hashing (2 weeks), Sprint #3: OPF File Transfer GCOP/DIP interface (2 weeks), Sprint #4: Archival/Data retention and Recovery (2 weeks), Functional Testing FIT (3 weeks), User Acceptance Testing UAT (2 weeks), System Integration Testing SIT (1 week), Non-Functional Testing NFT (1 week), Test Documentation, TDM Coordination, Pre-Go-live support (1 week), Go-live support (1 week), Post-Go-live support (1 week)
+
+
+STAGE 3: DELIVERABLES
+---------------------
+System Tested Code for Sprint #1 (File extraction service), System Tested Code for Sprint #2 (File Compression and Hashing service), System Tested Code for Sprint #3 (File transfer service), System Tested Code for Sprint #4 (Archival and recovery service), Test Documentation Package (Requirements review, Test docs, Defect Triage, Test Summary), Functional Testing FIT Support (3 weeks), User Acceptance Testing UAT Support (2 weeks), System Integration Testing SIT Support (1 week), Non-Functional Testing NFT Support (1 week Performance/HA/DR), Go-Live Support Package (Pre-Go-live 1 week, Go-live 1 week, Post-Go-live 1 week)
+
+
+STAGE 4: TIMELINE (Use Timeline Builder)
+-----------------------------------------
+Start Date: 2025-01-02
+End Date: 2025-02-28
+Number of Sprints: 10
+Weeks per Sprint: 2
+
+
+STAGE 5: RESOURCES (Use + buttons)
+-----------------------------------
+Developer: 3
+Tester: 2
+QA Engineer: 1
+Business Analyst: 1
+DevOps: 1
+Project Manager: 1
+
+
+STAGE 6: CONTACTS
+-----------------
+CONTACT: MUFG Bank | Contact Person: Joshua Morgan (Billing Contact, Accounts Payable) | Email: accountspayable.invoices@uk.mufg.jp | Phone: +44 20 7577 5162 | Address: 25 Ropemaker Street, London, EC2Y 9AN, United Kingdom
+
+CONTRACTOR: Oracle Financial Services Software B.V. | Contact Person: Yogesh Kamat (Oracle Representative) | Email: yogesh.kamat@oracle.com | Phone: +44 20 7531 4404 | Address: The Helicon, 1 South Place, London, EC2M 2RB, United Kingdom
+
+
+STAGE 7: BUDGET
+---------------
+Milestone 1: Sprint #1 completion or 31-Jan-2025, Milestone 2: Sprint #2 completion or 28-Feb-2025, Milestone 3: Sprint #3 completion or 28-Feb-2025, Milestone 4: Sprint #4 completion or 28-Feb-2025, Milestone 5: FIT Testing completion, Milestone 6: UAT Testing completion, Milestone 7: SIT Testing completion, Milestone 8: NFT Testing completion, Milestone 9: Pre-Go-live completion, Milestone 10: Go-live completion, Milestone 11: Post-Go-live completion. Total Estimated Expenses: £0.00, Currency: Pounds Sterling (£), Payment Terms: Net 30 days, Offer Valid: 28-Feb-2025
+
+
+STAGE 8: GENERATE
+-----------------
+Click "Generate SOW Document" button
+
