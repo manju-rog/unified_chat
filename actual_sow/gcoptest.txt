@@ -1,0 +1,21 @@
+PROJECT INFO:
+GB-16796941, OPF to G-COP Data Extraction Compression and transfer Implementation, objectives are Data Extraction, Compression, and transfer
+
+SERVICES:
+standard
+
+DELIVERABLES:
+Sprint #1 delivering File extraction service for the Sprint #1 deliverable as described in the specifications document. Sprint #2 delivering File Compression and Hashing service for the Sprint #2 deliverable as described in the specifications document. Sprint #3 delivering File transfer service for the Sprint #3 deliverable as described in the specification document. Sprint #4 delivering Archival and recovery service for the Sprint #4 deliverable as described in the specification document. Test Plan and Test Cases consisting of a detailed test plan with principles that guide the overall testing process along with test cases in line with the requirements for Connectivity Test Integration Test, System Integrity Test SIT, User Acceptance Test UAT, and Non-Functional Test Performance. DevOps Support to enable Continuous Integration and Continuous Deployment across the environments. Support for SIT including System Integrity Test SIT Execution and Defect Triage with Test Summary Report Documentation. Support for UAT to support UAT users and business testing.
+
+TIMELINE:
+Start date 2026-01-15, end date 2026-04-30, 10 sprints of 2 weeks each
+
+RESOURCES:
+2 Senior Developers from Development team full-time, 1 DevOps Engineer from Infrastructure team full-time, 2 QA Engineers from Testing team full-time, 1 TDM Coordinator from Data Management team part-time at 50%, 1 Project Manager from PMO full-time
+
+ CONTACTS:
+ Client is MUFG Bank, Ltd, Contractor is Oracle Financial Services Software
+
+ BUDGET:
+ Sprint 1 Development milestone 25000 dollars delivered at sprint 1, Sprint 2 Development milestone 25000 dollars delivered at sprint 2, Sprint 3 Development milestone 25000 dollars delivered at sprint 3, Sprint 4 Development milestone 25000 dollars delivered at sprint 4, Testing and QA milestone 35000 dollars delivered at sprint 7, SIT Support milestone 15000 dollars delivered at sprint 8, UAT Support milestone 20000 dollars delivered at sprint 10, estimated expenses 15000 dollars for testing tools, infrastructure, and TDM coordination
+
