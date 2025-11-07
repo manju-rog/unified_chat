@@ -21,8 +21,8 @@ from chromadb.config import Settings
 from sentence_transformers import SentenceTransformer, CrossEncoder
 import numpy as np
 
-from .document_processor import DocumentChunk
-from ..config import get_settings
+from .rag_document_processor import DocumentChunk
+from ..rag_config import get_settings
 
 
 class UltimateVectorStore:

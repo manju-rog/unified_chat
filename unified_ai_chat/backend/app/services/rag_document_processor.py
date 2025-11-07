@@ -56,7 +56,7 @@ except LookupError:
     nltk.download('punkt', quiet=True)
     nltk.download('stopwords', quiet=True)
 
-from ..config import get_settings
+from ..rag_config import get_settings
 
 
 @dataclass

@@ -20,9 +20,20 @@ from .services.sow_direct import SowAdapter
 from .sow_components.models import SowState
 from .session_manager import session_manager
 
+# RAG imports
+try:
+    from .services.rag_chain import UltimateRAGChain
+    RAG_AVAILABLE = True
+except Exception as e:
+    logger.warning(f"RAG system not available: {e}")
+    RAG_AVAILABLE = False
+
 # SOW globals
 SOW_SESSIONS: dict[str, SowState] = {}
 sow_adapter = SowAdapter(out_root=Path("output"))
+
+# RAG global
+rag_chain: Optional["UltimateRAGChain"] = None
 
 SOW_STATE_TO_SECTION = {
     "PROJECT_BASICS": "services",
@@ -1258,3 +1269,163 @@ async def download_sow_document(session_id: str, filename: str, settings: Settin
     if not path.exists():
         raise HTTPException(status_code=404, detail="Document not found")
     return FileResponse(path, filename=filename)
+
+
+# ===== RAG ENDPOINTS =====
+
+@app.post("/api/rag/upload")
+async def rag_upload_files(files: List[UploadFile] = File(...)):
+    """Upload and process documents for RAG"""
+    if not RAG_AVAILABLE or not rag_chain:
+        raise HTTPException(status_code=503, detail="RAG system not available")
+
+    try:
+        upload_dir = Path("./uploads/rag")
+        upload_dir.mkdir(parents=True, exist_ok=True)
+
+        saved_paths = []
+        for file in files:
+            file_path = upload_dir / file.filename
+            with open(file_path, "wb") as f:
+                import shutil
+                shutil.copyfileobj(file.file, f)
+            saved_paths.append(str(file_path))
+
+        result = rag_chain.process_documents(file_paths=saved_paths)
+
+        return {
+            "success": True,
+            "message": f"Processed {result['documents_processed']} documents",
+            "chunks_created": result['chunks_created'],
+            "documents": result['documents_processed']
+        }
+    except Exception as e:
+        logger.error(f"RAG upload error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/rag/upload-folder")
+async def rag_upload_folder(folder_path: str):
+    """Process entire folder of documents"""
+    if not RAG_AVAILABLE or not rag_chain:
+        raise HTTPException(status_code=503, detail="RAG system not available")
+
+    try:
+        folder = Path(folder_path)
+        if not folder.exists():
+            raise HTTPException(status_code=404, detail=f"Folder not found: {folder_path}")
+
+        result = rag_chain.process_documents(folder_path=str(folder))
+
+        return {
+            "success": True,
+            "message": f"Processed {result['documents_processed']} documents from folder",
+            "chunks_created": result['chunks_created'],
+            "documents": result['documents_processed'],
+            "chunk_types": result.get('chunk_types', {})
+        }
+    except Exception as e:
+        logger.error(f"RAG folder upload error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/rag/query")
+async def rag_query(request: Dict[str, Any]):
+    """Query documents using RAG"""
+    if not RAG_AVAILABLE or not rag_chain:
+        raise HTTPException(status_code=503, detail="RAG system not available")
+
+    try:
+        question = request.get("question")
+        session_id = request.get("session_id", "default")
+        file_filters = request.get("file_filters")
+
+        if not question:
+            raise HTTPException(status_code=400, detail="Question is required")
+
+        result = rag_chain.query(
+            question=question,
+            session_id=session_id,
+            file_filters=file_filters,
+            include_history=True
+        )
+
+        return {
+            "success": result['success'],
+            "answer": result['answer'],
+            "sources": result.get('sources', []),
+            "confidence": result.get('confidence', 0.0),
+            "files_used": result.get('files_used', []),
+            "num_chunks": result.get('num_chunks_used', 0)
+        }
+    except Exception as e:
+        logger.error(f"RAG query error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/rag/documents")
+async def rag_list_documents():
+    """List all indexed documents"""
+    if not RAG_AVAILABLE or not rag_chain:
+        raise HTTPException(status_code=503, detail="RAG system not available")
+
+    try:
+        docs = rag_chain.list_documents()
+        return {
+            "success": True,
+            "documents": docs,
+            "count": len(docs)
+        }
+    except Exception as e:
+        logger.error(f"RAG list documents error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/rag/stats")
+async def rag_statistics():
+    """Get RAG system statistics"""
+    if not RAG_AVAILABLE or not rag_chain:
+        raise HTTPException(status_code=503, detail="RAG system not available")
+
+    try:
+        stats = rag_chain.get_statistics()
+        return {
+            "success": True,
+            "stats": stats
+        }
+    except Exception as e:
+        logger.error(f"RAG stats error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/rag/clear")
+async def rag_clear():
+    """Clear all RAG documents"""
+    if not RAG_AVAILABLE or not rag_chain:
+        raise HTTPException(status_code=503, detail="RAG system not available")
+
+    try:
+        rag_chain.clear_vector_store()
+        return {
+            "success": True,
+            "message": "All documents cleared"
+        }
+    except Exception as e:
+        logger.error(f"RAG clear error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Initialize RAG on startup
+@app.on_event("startup")
+async def init_rag():
+    """Initialize RAG system on startup"""
+    global rag_chain
+    if RAG_AVAILABLE:
+        try:
+            rag_chain = UltimateRAGChain()
+            logger.info("✅ RAG system initialized successfully!")
+        except Exception as e:
+            logger.warning(f"⚠️ RAG system initialization failed: {e}")
+            rag_chain = None
+    else:
+        logger.info("RAG system not available (missing dependencies)")

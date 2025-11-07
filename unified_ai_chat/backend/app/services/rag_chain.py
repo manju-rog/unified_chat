@@ -14,9 +14,9 @@ from datetime import datetime
 import json
 import anthropic
 
-from .document_processor import UltimateDocumentProcessor, DocumentChunk
-from .vector_store import UltimateVectorStore
-from ..config import get_settings
+from .rag_document_processor import UltimateDocumentProcessor, DocumentChunk
+from .rag_vector_store import UltimateVectorStore
+from ..rag_config import get_settings
 
 
 class UltimateRAGChain:
